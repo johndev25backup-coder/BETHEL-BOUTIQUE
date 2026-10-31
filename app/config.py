@@ -28,7 +28,7 @@ class Config:
     # for the stock-locking logic once real customers are hitting it.
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///boutique_demo.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), "instance", "uploads")
+    UPLOAD_FOLDER = os.path.join("/tmp", "bethel_boutique", "uploads")
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024
 
     # Demo/testing mode: when true, payment "initiation" instantly succeeds
