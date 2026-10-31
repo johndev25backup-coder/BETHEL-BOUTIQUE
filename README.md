@@ -1,5 +1,9 @@
 # Boutique Retail Management System - Backend
 
+Bethel Boutique is a modern, responsive e-commerce application designed to
+deliver an elegant online shopping experience with product browsing, cart,
+checkout, and mobile-friendly web support.
+
 Flask + PostgreSQL backend implementing the build spec, with payment API
 calls left as clearly marked stubs (see "What's stubbed out" below).
 
