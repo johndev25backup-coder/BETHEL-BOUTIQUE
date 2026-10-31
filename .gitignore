@@ -8,6 +8,7 @@ venv/
 instance/*.db
 instance/*.db.*
 instance/uploads/
+boutique_app/instance/
 .pytest_cache/
 .vscode/
 
