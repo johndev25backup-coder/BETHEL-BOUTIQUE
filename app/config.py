@@ -29,7 +29,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///boutique_demo.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.path.join("/tmp", "bethel_boutique", "uploads")
-    MAX_CONTENT_LENGTH = 5 * 1024 * 1024
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024
 
     # Demo/testing mode: when true, payment "initiation" instantly succeeds
     # with a fake reference instead of calling MTN/Airtel/M-Pesa - lets you
