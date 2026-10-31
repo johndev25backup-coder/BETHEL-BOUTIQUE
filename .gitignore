@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+instance/*.db
+instance/*.db.*
+instance/uploads/
+.pytest_cache/
+.vscode/
+
+# Local deployment and OS files
+.vercel/
+.DS_Store
+Thumbs.db

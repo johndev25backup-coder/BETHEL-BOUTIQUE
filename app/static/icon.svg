@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Bethel Boutique icon">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f7d5e5"/>
+      <stop offset="100%" stop-color="#7e32ce"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  <circle cx="256" cy="170" r="110" fill="#fdf2f8" opacity="0.9"/>
+  <path d="M168 190L214 120h84l46 70 36 210H132l36-210zm58 44h58l-8 92h-42l-8-92zm92 0h42l-8 92h-42l8-92z" fill="#7e32ce"/>
+  <path d="M216 332h80l-14 86h-52l-14-86z" fill="#f59e0b" opacity="0.9"/>
+  <text x="256" y="450" text-anchor="middle" font-size="78" font-family="Segoe UI,Arial,sans-serif" font-weight="700" fill="#fff">B</text>
+</svg>

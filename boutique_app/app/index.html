@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BETHEL BOUTIQUE – Business Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Syne:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            boutique: {
+              50:  '#faf6ff', 100: '#f3e9ff', 200: '#e7d5ff', 300: '#d9b4fe',
+              400: '#c094fc', 500: '#a865f7', 600: '#9433ea', 700: '#7e32ce',
+              800: '#6b31a8', 900: '#591c87',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'google', monteserrrat-serif; letter-spacing: 0.02em; }
+    input, textarea, select { font-family: 'aria', sans-serif; letter-spacing: normal; }
+    .font-title { font-family: 'Playfair Display', serif; letter-spacing: normal; }
+    .font-subtitle { font-family: 'Syne', sans-serif; letter-spacing: normal; }
+    .sidebar-link.active { background-color: #f8c6e7; color: #ce2278; border-right: 3px solid #27e941; }
+    .card { transition: all 0.2s ease; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.08); }
+    .hidden { display: none !important; }
+    .btn-google { display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+  </style>
+</head>
+<body class="bg-boutique-50 text-white-800">
+
+  <div id="login-page" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-boutique-700 via-boutique-800 to-boutique-900">
+    <div class="w-full max-w-md">
+      <div class="text-center mb-8">
+        <h1 class="font-title text-4xl text-white tracking-tight">BETHEL BOUTIQUE</h1>
+        <p class="font-subtitle text-boutique-100 mt-2">Business Management System</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-xl border border-boutique-100 p-5">
+        <div class="flex mb-6 bg-boutique-50 rounded-lg p-1 text-sm">
+          <button id="tab-staff" onclick="setLoginTab('staff')" class="flex-1 py-2 rounded-md font-medium transition bg-white shadow text-boutique-700">Staff / Admin</button>
+          <button id="tab-customer" onclick="setLoginTab('customer')" class="flex-1 py-2 rounded-md font-medium transition text-gray-500">Customer</button>
+        </div>
+
+        <div id="login-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100"></div>
+
+        <div id="panel-staff">
+          <h2 class="font-subtitle text-xl text-center mb-5">Sign in to your account</h2>
+          <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+            <div>
+              <label class="block text-sm font-block text-purple-700 mb-1.5">Email</label>
+              <input type="email" id="login-email" required
+                class="w-full px-4 py-2.5 border border-boutique-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-boutique-400 focus:border-transparent"
+                placeholder="you@bethelboutique.com">
+            </div>
+            <div>
+              <label class="block text-sm font-block text-purple-700 mb-1.5">Password</label>
+              <input type="password" id="login-password" required
+                class="w-full px-4 py-2.5 border border-boutique-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-boutique-400 focus:border-transparent"
+                placeholder="••••••••">
+            </div>
+            <button type="submit" id="login-submit"
+              class="w-full bg-boutique-600 hover:bg-boutique-700 text-white py-2.5 rounded-lg font-medium transition">
+              Sign In
+            </button>
+          </form>
+
+          <div class="flex items-center gap-3 my-5">
+            <div class="flex-1 h-px bg-boutique-100"></div>
+            <span class="text-xs text-gray-400">or</span>
+            <div class="flex-1 h-px bg-boutique-100"></div>
+          </div>
+
+          <a href="/auth/google/login/staff" class="btn-google w-full border border-boutique-200 hover:bg-boutique-50 text-purple-700 py-2.5 rounded-lg font-block transition text-sm">
+            <svg class="w-4 h-4" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6c-2 1.5-4.6 2.5-7.7 2.5-5.3 0-9.7-3.4-11.3-8.1l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.6l6.6 5.6C41.4 36.6 44 30.8 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+            Sign in with Google
+          </a>
+          <p class="text-aria text-purple-400 text-center mt-4">Google sign-in only works for staff accounts an admin has already added.</p>
+        </div>
+
+        <div id="panel-customer" class="hidden">
+          <h2 class="font-subtitle text-xl text-center mb-3">Welcome back</h2>
+          <p class="text-sm text-gray-500 text-center mb-6">Sign in or register instantly with your Google account — no password needed.</p>
+          <a href="/auth/google/login/customer" class="btn-google w-full bg-boutique-600 hover:bg-boutique-700 text-white py-2.5 rounded-lg font-regular transition">
+            <svg class="w-4 h-4" viewBox="0 0 48 48"><path fill="#FFF" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/></svg>
+            Continue with Google
+          </a>
+          <p class="text-xs text-gray-400 text-center mt-4">First time here? Signing in with Google creates your customer account automatically.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="app" class="hidden flex h-screen overflow-hidden">
+
+    <aside class="w-64 bg-white border-r border-boutique-100 flex flex-col">
+      <div class="p-6 border-b border-boutique-100">
+        <h1 class="font-title text-2xl text-boutique-700 tracking-tight">BETHEL BOUTIQUE</h1>
+        <p class="font-subtitle text-xs text-gray-400 mt-1">Business Manager</p>
+      </div>
+
+      <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+        <a href="#" onclick="showSection('dashboard')" data-section="dashboard"
+          class="sidebar-link active flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Dashboard</a>
+        <a href="#" onclick="showSection('products')" data-section="products"
+          class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Products</a>
+        <a href="#" onclick="showSection('sales')" data-section="sales"
+          class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Point of Sale</a>
+        <a href="#" onclick="showSection('customers')" data-section="customers"
+          class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Customers</a>
+        <a href="#" onclick="showSection('orders')" data-section="orders"
+          class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Orders</a>
+
+        <div id="admin-nav" class="hidden space-y-1 pt-2">
+          <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin</div>
+          <a href="#" onclick="showSection('reports')" data-section="reports"
+            class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Reports</a>
+          <a href="#" onclick="showSection('staff')" data-section="staff"
+            class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Staff Management</a>
+        </div>
+      </nav>
+
+      <div class="p-4 border-t border-boutique-100">
+        <div class="flex items-center gap-3 mb-3">
+          <div id="user-avatar" class="w-9 h-9 rounded-full bg-boutique-200 flex items-center justify-center text-boutique-700 font-medium text-sm">?</div>
+          <div class="flex-1 min-w-0">
+            <p id="user-name" class="text-sm font-medium truncate">User</p>
+            <p id="user-role" class="text-xs text-gray-400 truncate">Role</p>
+          </div>
+        </div>
+        <button onclick="logout()" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto">
+      <header class="bg-white border-b border-boutique-100 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+        <div>
+          <h2 id="page-title" class="text-xl font-semibold text-gray-800">Dashboard</h2>
+          <p id="page-subtitle" class="font-subtitle text-sm text-gray-400">Welcome back</p>
+        </div>
+      </header>
+
+      <div class="p-8">
+
+        <section id="dashboard" class="section hidden">
+          <div id="dashboard-admin-stats" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
+          <div id="dashboard-staff-note" class="hidden mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
+            You have access to Point of Sale, Products (view), Customers and Orders. Contact an admin for reports or staff management.
+          </div>
+          <p class="text-sm text-gray-400">Use the sidebar to get started.</p>
+        </section>
+
+        <section id="products" class="section hidden">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="font-medium text-lg">Products</h3>
+            <button id="btn-add-product" onclick="toggleAddProductForm()" class="hidden bg-boutique-600 hover:bg-boutique-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">+ Add Product</button>
+          </div>
+
+          <form id="add-product-form" onsubmit="submitAddProduct(event)" class="hidden bg-white rounded-xl border border-boutique-100 p-6 mb-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+            <input required placeholder="Name" id="np-name" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm col-span-2">
+            <input required placeholder="SKU" id="np-sku" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+            <input placeholder="Category" id="np-category" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+            <input required placeholder="Price" type="number" step="0.01" id="np-price" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+            <input placeholder="Stock qty" type="number" id="np-stock" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+            <button type="submit" class="col-span-2 md:col-span-1 bg-boutique-600 hover:bg-boutique-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Save</button>
+          </form>
+
+          <div class="bg-white rounded-xl border border-boutique-100 overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-boutique-50">
+                <tr class="text-left text-gray-500">
+                  <th class="px-6 py-3 font-medium">Product</th>
+                  <th class="px-6 py-3 font-medium">SKU</th>
+                  <th class="px-6 py-3 font-medium">Category</th>
+                  <th class="px-6 py-3 font-medium">Price</th>
+                  <th class="px-6 py-3 font-medium">Stock</th>
+                  <th class="px-6 py-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody id="products-tbody" class="divide-y divide-boutique-50">
+                <tr><td class="px-6 py-4 text-gray-400" colspan="6">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="sales" class="section hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-white rounded-xl border border-boutique-100 p-6">
+              <h3 class="font-medium mb-4">Tap a product to add it to the cart</h3>
+              <div id="pos-product-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-boutique-100 p-6">
+              <h3 class="font-medium mb-4">Current Cart</h3>
+              <div id="pos-cart" class="space-y-3 mb-6 max-h-64 overflow-y-auto text-sm text-gray-400">Cart is empty</div>
+              <div class="border-t border-boutique-100 pt-4 space-y-2 text-sm">
+                <div class="flex justify-between"><span class="text-gray-500">Subtotal</span><span id="pos-subtotal">UGX 0</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Tax</span><span id="pos-tax">UGX 0</span></div>
+                <div class="flex justify-between font-semibold text-lg pt-2"><span>Total</span><span id="pos-total">UGX 0</span></div>
+              </div>
+              <div id="pos-error" class="hidden mt-3 text-xs text-red-600"></div>
+              <button onclick="completeSale()" class="w-full mt-6 bg-boutique-600 hover:bg-boutique-700 text-white py-3 rounded-lg font-medium transition">Complete Sale</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="customers" class="section hidden">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="font-medium text-lg">Customers</h3>
+            <button onclick="toggleAddCustomerForm()" class="bg-boutique-600 hover:bg-boutique-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Add Customer</button>
+          </div>
+          <form id="add-customer-form" onsubmit="submitAddCustomer(event)" class="hidden bg-white rounded-xl border border-boutique-100 p-6 mb-6 grid grid-cols-1 md:grid-cols-4 gap-3">
+            <input required placeholder="Name" id="nc-name" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+            <input placeholder="Phone" id="nc-phone" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+            <input placeholder="Email" id="nc-email" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+            <button type="submit" class="bg-boutique-600 hover:bg-boutique-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Save</button>
+          </form>
+          <div class="bg-white rounded-xl border border-boutique-100 overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-boutique-50">
+                <tr class="text-left text-gray-500">
+                  <th class="px-6 py-3 font-medium">Name</th>
+                  <th class="px-6 py-3 font-medium">Phone</th>
+                  <th class="px-6 py-3 font-medium">Email</th>
+                  <th class="px-6 py-3 font-medium">Total Spent</th>
+                </tr>
+              </thead>
+              <tbody id="customers-tbody" class="divide-y divide-boutique-50">
+                <tr><td class="px-6 py-4 text-gray-400" colspan="4">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="orders" class="section hidden">
+          <div class="bg-white rounded-xl border border-boutique-100 overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-boutique-50">
+                <tr class="text-left text-gray-500">
+                  <th class="px-6 py-3 font-medium">Order</th>
+                  <th class="px-6 py-3 font-medium">Date</th>
+                  <th class="px-6 py-3 font-medium">Total</th>
+                  <th class="px-6 py-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody" class="divide-y divide-boutique-50">
+                <tr><td class="px-6 py-4 text-gray-400" colspan="4">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="reports" class="section hidden">
+          <div id="reports-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center bg-white rounded-xl border border-boutique-100 p-6"></div>
+        </section>
+
+        <section id="staff" class="section hidden">
+          <div class="bg-white rounded-xl border border-boutique-100 overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-boutique-50">
+                <tr class="text-left text-gray-500">
+                  <th class="px-6 py-3 font-medium">Name</th>
+                  <th class="px-6 py-3 font-medium">Email</th>
+                  <th class="px-6 py-3 font-medium">Role</th>
+                  <th class="px-6 py-3 font-medium">Active</th>
+                </tr>
+              </thead>
+              <tbody id="staff-tbody" class="divide-y divide-boutique-50">
+                <tr><td class="px-6 py-4 text-gray-400" colspan="4">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let cart = [];
+    let productCache = [];
+
+    const ERROR_MESSAGES = {
+      not_authorized: "That Google account isn't linked to a staff login. Ask an admin to add you first.",
+      google_no_email: "Google didn't share an email address — try a different account.",
+    };
+
+    function setLoginTab(tab) {
+      const staffTab = document.getElementById('tab-staff');
+      const customerTab = document.getElementById('tab-customer');
+      document.getElementById('panel-staff').classList.toggle('hidden', tab !== 'staff');
+      document.getElementById('panel-customer').classList.toggle('hidden', tab !== 'customer');
+      staffTab.classList.toggle('bg-white', tab === 'staff');
+      staffTab.classList.toggle('shadow', tab === 'staff');
+      staffTab.classList.toggle('text-boutique-700', tab === 'staff');
+      staffTab.classList.toggle('text-gray-500', tab !== 'staff');
+      customerTab.classList.toggle('bg-white', tab === 'customer');
+      customerTab.classList.toggle('shadow', tab === 'customer');
+      customerTab.classList.toggle('text-boutique-700', tab === 'customer');
+      customerTab.classList.toggle('text-gray-500', tab !== 'customer');
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errorEl = document.getElementById('login-error');
+      const submitBtn = document.getElementById('login-submit');
+      submitBtn.disabled = true;
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email, password})
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          errorEl.textContent = body.error || 'Invalid email or password.';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+        errorEl.classList.add('hidden');
+        currentUser = body;
+        showApp();
+      } catch (err) {
+        errorEl.textContent = 'Could not reach the server. Try again.';
+        errorEl.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    async function logout() {
+      await fetch('/logout', {method: 'POST'});
+      currentUser = null;
+      cart = [];
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('login-page').classList.remove('hidden');
+      document.getElementById('login-form').reset();
+    }
+
+    async function tryRestoreSession() {
+      try {
+        const res = await fetch('/api/me');
+        if (res.ok) {
+          currentUser = await res.json();
+          showApp();
+        }
+      } catch (err) { /* not logged in, show login page as-is */ }
+    }
+
+    function showApp() {
+      document.getElementById('login-page').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+
+      document.getElementById('user-name').textContent = currentUser.name;
+      document.getElementById('user-role').textContent = currentUser.role === 'admin' ? 'Administrator' : 'Staff Member';
+      document.getElementById('user-avatar').textContent = (currentUser.name || '?').slice(0,2).toUpperCase();
+      document.getElementById('page-subtitle').textContent = `Welcome back, ${(currentUser.name || '').split(' ')[0]}`;
+
+      const isAdmin = currentUser.role === 'admin';
+      document.getElementById('admin-nav').classList.toggle('hidden', !isAdmin);
+      document.getElementById('btn-add-product')?.classList.toggle('hidden', !isAdmin);
+
+      showSection('dashboard');
+    }
+
+    async function showSection(id) {
+      const restricted = ['reports', 'staff'];
+      if (restricted.includes(id) && currentUser.role !== 'admin') {
+        id = 'dashboard';
+      }
+
+      document.querySelectorAll('.section').forEach(sec => sec.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+
+      document.querySelectorAll('.sidebar-link').forEach(link => {
+        link.classList.toggle('active', link.dataset.section === id);
+      });
+
+      const titles = {dashboard:'Dashboard', products:'Products', sales:'Point of Sale', customers:'Customers', orders:'Orders', reports:'Reports', staff:'Staff Management'};
+      document.getElementById('page-title').textContent = titles[id] || 'Dashboard';
+
+      if (id === 'dashboard') await loadDashboard();
+      if (id === 'products') await loadProducts();
+      if (id === 'sales') await loadPos();
+      if (id === 'customers') await loadCustomers();
+      if (id === 'orders') await loadOrders();
+      if (id === 'reports') await loadReports();
+      if (id === 'staff') await loadStaff();
+    }
+
+    function fmt(n) { return 'UGX ' + Number(n || 0).toLocaleString(); }
+
+    async function apiGet(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+      return res.json();
+    }
+    async function apiPost(url, data) {
+      const res = await fetch(url, {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)});
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || res.statusText);
+      return body;
+    }
+
+    async function loadDashboard() {
+      const isAdmin = currentUser.role === 'admin';
+      document.getElementById('dashboard-staff-note').classList.toggle('hidden', isAdmin);
+      const statsEl = document.getElementById('dashboard-admin-stats');
+      statsEl.classList.toggle('hidden', !isAdmin);
+      if (!isAdmin) return;
+      try {
+        const summary = await apiGet('/api/reports/summary');
+        statsEl.innerHTML = `
+          <div class="card bg-white rounded-xl p-6 border border-boutique-100"><p class="text-sm text-gray-500">Total Sales</p><p class="text-2xl font-semibold mt-1">${fmt(summary.total_sales)}</p></div>
+          <div class="card bg-white rounded-xl p-6 border border-boutique-100"><p class="text-sm text-gray-500">Orders</p><p class="text-2xl font-semibold mt-1">${summary.order_count}</p></div>
+          <div class="card bg-white rounded-xl p-6 border border-boutique-100"><p class="text-sm text-gray-500">Avg. Order Value</p><p class="text-2xl font-semibold mt-1">${fmt(summary.avg_order_value)}</p></div>
+          <div class="card bg-white rounded-xl p-6 border border-boutique-100"><p class="text-sm text-gray-500">Low Stock Items</p><p class="text-2xl font-semibold mt-1 text-amber-600">${summary.low_stock_count}</p></div>`;
+      } catch (err) { /* non-admin shouldn't hit this anyway */ }
+    }
+
+    async function loadProducts() {
+      const tbody = document.getElementById('products-tbody');
+      try {
+        productCache = await apiGet('/api/products');
+        tbody.innerHTML = productCache.map(p => `
+          <tr>
+            <td class="px-6 py-4 font-medium">${p.name}</td>
+            <td class="px-6 py-4 text-gray-500">${p.sku}</td>
+            <td class="px-6 py-4">${p.category || '—'}</td>
+            <td class="px-6 py-4">${fmt(p.price)}</td>
+            <td class="px-6 py-4">${p.stock_qty}</td>
+            <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs ${p.status === 'In Stock' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}">${p.status}</span></td>
+          </tr>`).join('') || '<tr><td class="px-6 py-4 text-gray-400" colspan="6">No products yet.</td></tr>';
+      } catch (err) {
+        tbody.innerHTML = `<tr><td class="px-6 py-4 text-red-600" colspan="6">${err.message}</td></tr>`;
+      }
+    }
+
+    function toggleAddProductForm() {
+      document.getElementById('add-product-form').classList.toggle('hidden');
+    }
+
+    async function submitAddProduct(e) {
+      e.preventDefault();
+      try {
+        await apiPost('/api/products', {
+          name: document.getElementById('np-name').value,
+          sku: document.getElementById('np-sku').value,
+          category: document.getElementById('np-category').value,
+          price: parseFloat(document.getElementById('np-price').value),
+          stock_qty: parseInt(document.getElementById('np-stock').value || '0', 10),
+        });
+        document.getElementById('add-product-form').reset();
+        toggleAddProductForm();
+        await loadProducts();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function loadPos() {
+      const grid = document.getElementById('pos-product-grid');
+      try {
+        productCache = await apiGet('/api/products');
+        grid.innerHTML = productCache.filter(p => p.stock_qty > 0).map(p => `
+          <div onclick="addToCart(${p.id})" class="border border-boutique-100 rounded-xl p-4 text-center cursor-pointer hover:border-boutique-400 hover:bg-boutique-50 transition">
+            <p class="text-sm font-medium">${p.name}</p>
+            <p class="text-xs text-gray-500">${fmt(p.price)}</p>
+          </div>`).join('');
+      } catch (err) {
+        grid.innerHTML = `<p class="text-red-600 text-sm">${err.message}</p>`;
+      }
+      renderCart();
+    }
+
+    function addToCart(productId) {
+      const product = productCache.find(p => p.id === productId);
+      if (!product) return;
+      const existing = cart.find(c => c.product.id === productId);
+      if (existing) {
+        if (existing.qty < product.stock_qty) existing.qty += 1;
+      } else {
+        cart.push({product, qty: 1});
+      }
+      renderCart();
+    }
+
+    function renderCart() {
+      const cartEl = document.getElementById('pos-cart');
+      if (cart.length === 0) {
+        cartEl.innerHTML = '<p class="text-gray-400">Cart is empty</p>';
+      } else {
+        cartEl.innerHTML = cart.map(c => `
+          <div class="flex justify-between items-center">
+            <div><p class="font-medium">${c.product.name}</p><p class="text-xs text-gray-400">Qty: ${c.qty}</p></div>
+            <p>${fmt(c.product.price * c.qty)}</p>
+          </div>`).join('');
+      }
+      const subtotal = cart.reduce((sum, c) => sum + c.product.price * c.qty, 0);
+      const tax = subtotal * {{ tax_rate }};
+      document.getElementById('pos-subtotal').textContent = fmt(subtotal);
+      document.getElementById('pos-tax').textContent = fmt(tax);
+      document.getElementById('pos-total').textContent = fmt(subtotal + tax);
+    }
+
+    async function completeSale() {
+      const errorEl = document.getElementById('pos-error');
+      errorEl.classList.add('hidden');
+      if (cart.length === 0) return;
+      try {
+        await apiPost('/api/orders', {
+          items: cart.map(c => ({product_id: c.product.id, qty: c.qty}))
+        });
+        cart = [];
+        await loadPos();
+        alert('Sale completed.');
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    async function loadCustomers() {
+      const tbody = document.getElementById('customers-tbody');
+      try {
+        const customers = await apiGet('/api/customers');
+        tbody.innerHTML = customers.map(c => `
+          <tr>
+            <td class="px-6 py-4 font-medium">${c.name}</td>
+            <td class="px-6 py-4">${c.phone || '—'}</td>
+            <td class="px-6 py-4">${c.email || '—'}</td>
+            <td class="px-6 py-4">${fmt(c.total_spent)}</td>
+          </tr>`).join('') || '<tr><td class="px-6 py-4 text-gray-400" colspan="4">No customers yet.</td></tr>';
+      } catch (err) {
+        tbody.innerHTML = `<tr><td class="px-6 py-4 text-red-600" colspan="4">${err.message}</td></tr>`;
+      }
+    }
+
+    function toggleAddCustomerForm() {
+      document.getElementById('add-customer-form').classList.toggle('hidden');
+    }
+
+    async function submitAddCustomer(e) {
+      e.preventDefault();
+      try {
+        await apiPost('/api/customers', {
+          name: document.getElementById('nc-name').value,
+          phone: document.getElementById('nc-phone').value,
+          email: document.getElementById('nc-email').value,
+        });
+        document.getElementById('add-customer-form').reset();
+        toggleAddCustomerForm();
+        await loadCustomers();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function loadOrders() {
+      const tbody = document.getElementById('orders-tbody');
+      try {
+        const orders = await apiGet('/api/orders');
+        tbody.innerHTML = orders.map(o => `
+          <tr>
+            <td class="px-6 py-4 font-medium">#ORD-${o.id}</td>
+            <td class="px-6 py-4">${(o.created_at || '').slice(0,10)}</td>
+            <td class="px-6 py-4">${fmt(o.total)}</td>
+            <td class="px-6 py-4"><span class="px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs">${o.status}</span></td>
+          </tr>`).join('') || '<tr><td class="px-6 py-4 text-gray-400" colspan="4">No orders yet.</td></tr>';
+      } catch (err) {
+        tbody.innerHTML = `<tr><td class="px-6 py-4 text-red-600" colspan="4">${err.message}</td></tr>`;
+      }
+    }
+
+    async function loadReports() {
+      const el = document.getElementById('reports-stats');
+      try {
+        const s = await apiGet('/api/reports/summary');
+        el.innerHTML = `
+          <div><p class="text-2xl font-semibold">${fmt(s.total_sales)}</p><p class="text-xs text-gray-400">Total Sales</p></div>
+          <div><p class="text-2xl font-semibold">${s.order_count}</p><p class="text-xs text-gray-400">Orders</p></div>
+          <div><p class="text-2xl font-semibold">${fmt(s.avg_order_value)}</p><p class="text-xs text-gray-400">Avg. Order Value</p></div>
+          <div><p class="text-2xl font-semibold">${s.low_stock_count}</p><p class="text-xs text-gray-400">Low Stock Items</p></div>`;
+      } catch (err) {
+        el.innerHTML = `<p class="text-red-600 text-sm col-span-4">${err.message}</p>`;
+      }
+    }
+
+    async function loadStaff() {
+      const tbody = document.getElementById('staff-tbody');
+      try {
+        const staff = await apiGet('/api/staff');
+        tbody.innerHTML = staff.map(u => `
+          <tr>
+            <td class="px-6 py-4 font-medium">${u.name}</td>
+            <td class="px-6 py-4">${u.email}</td>
+            <td class="px-6 py-4"><span class="px-2 py-1 bg-purple-50 text-purple-700 rounded-full text-xs">${u.role}</span></td>
+            <td class="px-6 py-4">${String(u.active) === '0' ? 'Inactive' : 'Active'}</td>
+          </tr>`).join('') || '<tr><td class="px-6 py-4 text-gray-400" colspan="4">No staff yet.</td></tr>';
+      } catch (err) {
+        tbody.innerHTML = `<tr><td class="px-6 py-4 text-red-600" colspan="4">${err.message}</td></tr>`;
+      }
+    }
+
+    {% if oauth_error %}
+    (function() {
+      const errorEl = document.getElementById('login-error');
+      errorEl.textContent = ERROR_MESSAGES['{{ oauth_error }}'] || 'Google sign-in failed. Try again.';
+      errorEl.classList.remove('hidden');
+    })();
+    {% endif %}
+
+    tryRestoreSession();
+  </script>
+</body>
+</html>

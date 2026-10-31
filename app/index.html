@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#7e32ce">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bethel Boutique">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="description" content="Bethel Boutique retail management dashboard and shopping app for desktop, Android, and iPhone.">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/static/icon.svg">
+  <title>BETHEL BOUTIQUE – Business Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Syne:wght@700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            boutique: {
+              50:  '#faf6ff', 100: '#f3e9ff', 200: '#e7d5ff', 300: '#d9b4fe',
+              400: '#c094fc', 500: '#a865f7', 600: '#9433ea', 700: '#7e32ce',
+              800: '#6b31a8', 900: '#591c87',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Montserrat', sans-serif; letter-spacing: 0.01em; }
+    input, textarea, select, button { font-family: 'Montserrat', sans-serif; letter-spacing: normal; }
+    .font-title { font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 0.01em; }
+    .font-subtitle { font-family: 'Montserrat', sans-serif; letter-spacing: normal; }
+    .sidebar-link.active { background-color: #f8c6e7; color: #ce2278; border-right: 3px solid #27e941; }
+    .card { transition: all 0.2s ease; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.08); }
+    .hidden { display: none !important; }
+    .btn-google { display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .gold-3d { color: #f8d477; text-shadow: 1px 1px 0 #8b5a16, 2px 2px 0 #6b4210, 0 0 18px rgb(255 220 120 / 0.45); }
+    .splash-pink { background: radial-gradient(circle at top, #f79ac7 0%, #d94e91 42%, #8b245f 100%); }
+    @media print {
+      body * { visibility: hidden !important; }
+      #reports, #reports * { visibility: visible !important; }
+      #reports { position: absolute; inset: 0; width: 100%; padding: 24px; background: white; }
+      #reports .no-print { display: none !important; }
+      #reports-stats, #reports-breakdown { border-color: #d1d5db; box-shadow: none; }
+      body.receipt-printing * { visibility: hidden !important; }
+      body.receipt-printing #pos-receipt, body.receipt-printing #pos-receipt * { visibility: visible !important; }
+      body.receipt-printing #pos-receipt { display: block !important; position: absolute; inset: 0; width: 100%; padding: 32px; border: 0; color: #111827; }
+      body.receipt-printing .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-boutique-50 text-white-800">
+
+  <div id="login-page" class="min-h-screen p-4 splash-pink">
+    <div class="w-full max-w-6xl mx-auto">
+      <div class="text-center mb-8">
+        <h1 class="font-title text-5xl gold-3d tracking-tight">BETHEL BOUTIQUE</h1>
+        <p class="font-subtitle gold-3d mt-2 text-lg">Where Beauty Meets Elegance</p>
+      </div>
+
+      <div class="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl border border-boutique-100 p-5">
+        <div class="flex mb-6 bg-boutique-50 rounded-lg p-1 text-sm">
+          <button id="tab-staff" onclick="setLoginTab('staff')" class="flex-1 py-2 rounded-md font-medium transition bg-white shadow text-boutique-700">Staff / Admin</button>
+          <button id="tab-customer" onclick="setLoginTab('customer')" class="flex-1 py-2 rounded-md font-medium transition text-gray-500">Customer</button>
+        </div>
+
+        <div id="login-error" class="hidden mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100"></div>
+
+        <div id="panel-staff">
+          <h2 class="font-subtitle text-xl text-center mb-4">Sign in to your account</h2>
+          <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+            <div>
+              <label class="block text-sm font-block text-purple-700 mb-1.5">Email</label>
+              <input type="email" id="login-email" required
+                class="w-full px-4 py-2.5 border border-boutique-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-boutique-400 focus:border-transparent"
+                placeholder="you@bethelboutique.com">
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="login-password" class="block text-sm font-block text-purple-700">Password</label>
+                <button type="button" onclick="togglePasswordVisibility()" class="text-xs text-boutique-700 hover:underline">Show password</button>
+              </div>
+              <input type="password" id="login-password" required
+                class="w-full px-4 py-2.5 border border-boutique-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-boutique-400 focus:border-transparent"
+                placeholder="••••••••">
+            </div>
+            <button type="submit" id="login-submit"
+              class="w-full bg-boutique-600 hover:bg-boutique-700 text-white py-2.5 rounded-lg font-medium transition">
+              Sign In
+            </button>
+          </form>
+
+          <div class="flex items-center gap-3 my-5">
+            <div class="flex-1 h-px bg-boutique-100"></div>
+            <span class="text-xs text-gray-400">or</span>
+            <div class="flex-1 h-px bg-boutique-100"></div>
+          </div>
+
+          <a href="#" onclick="event.preventDefault(); const errorEl = document.getElementById('login-error'); errorEl.textContent = 'Staff Google sign-in is not configured. Use email and password.'; errorEl.classList.remove('hidden');" class="btn-google w-full border border-boutique-200 hover:bg-boutique-50 text-purple-700 py-2.5 rounded-lg font-block transition text-sm">
+            <svg class="w-4 h-4" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6c-2 1.5-4.6 2.5-7.7 2.5-5.3 0-9.7-3.4-11.3-8.1l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.6l6.6 5.6C41.4 36.6 44 30.8 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+            Sign in with Google
+          </a>
+          <p class="text-aria text-purple-400 text-center mt-4">Google sign-in only works for staff accounts an admin has already added.</p>
+        </div>
+
+        <div id="panel-customer" class="hidden">
+          <h2 class="font-subtitle text-xl text-center mb-3">Welcome back</h2>
+          <p class="text-sm text-purple-500 text-center mb-6">Create an account or sign in with your phone number.</p>
+          <form onsubmit="requestCustomerOtp(event)" class="space-y-4">
+            <input required id="customer-name" placeholder="Full name" class="w-full px-4 py-2.5 border border-boutique-200 rounded-lg text-sm">
+            <input required id="customer-phone" placeholder="Phone number" class="w-full px-4 py-2.5 border border-boutique-200 rounded-lg text-sm">
+            <button type="submit" class="w-full bg-boutique-600 hover:bg-boutique-700 text-white py-2.5 rounded-lg font-medium transition">Send verification code</button>
+          </form>
+          <form onsubmit="verifyCustomerOtp(event)" class="space-y-4 mt-4">
+            <input required id="customer-otp" inputmode="numeric" maxlength="6" placeholder="6-digit verification code" class="w-full px-4 py-2.5 border border-boutique-200 rounded-lg text-sm">
+            <button type="submit" class="w-full border border-boutique-200 hover:bg-boutique-50 text-boutique-700 py-2.5 rounded-lg font-medium transition">Create account / Sign in</button>
+          </form>
+          <p id="customer-login-message" class="hidden text-sm text-center mt-4"></p>
+        </div>
+      </div>
+
+      <section id="guest-shop" class="mt-8 bg-white/95 rounded-2xl shadow-xl p-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+          <div><h2 class="font-subtitle text-xl text-gray-800">Browse the collection</h2><p class="text-sm text-gray-500">Shop first. Create an account only when you are ready to place your order.</p><p id="guest-connectivity-label" class="text-xs text-green-700 mt-1">Online</p></div>
+          <div class="flex gap-2"><input id="guest-search" oninput="loadGuestShop()" placeholder="Search products" class="px-3 py-2 border border-boutique-200 rounded-lg text-sm"><select id="guest-category" onchange="loadGuestShop()" class="px-3 py-2 border border-boutique-200 rounded-lg text-sm"><option value="">All categories</option></select></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-5">
+          <div id="guest-product-grid" class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+          <div class="border border-boutique-100 rounded-xl p-4 h-fit"><h3 class="font-medium mb-3">Cart</h3><div id="guest-cart" class="space-y-2 text-sm text-gray-500">Your cart is empty.</div><div class="border-t mt-4 pt-3 flex justify-between font-semibold"><span>Total</span><span id="guest-total">UGX 0</span></div><button onclick="guestCheckoutPrompt()" class="w-full mt-4 bg-boutique-600 text-white py-2 rounded-lg text-sm">Proceed to order</button></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="app" class="hidden flex h-screen overflow-hidden">
+
+    <aside class="w-64 bg-white border-r border-boutique-100 flex flex-col">
+      <div class="p-6 border-b border-boutique-100">
+        <h1 class="font-title text-2xl text-boutique-700 tracking-tight">BETHEL BOUTIQUE</h1>
+        <p class="font-subtitle text-xs text-gray-400 mt-1">Business Manager</p>
+      </div>
+
+      <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+        <a href="#" onclick="showSection('dashboard')" data-section="dashboard"
+          class="sidebar-link active flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Dashboard</a>
+        <a href="#" onclick="showSection('products')" data-section="products"
+          class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Products</a>
+        <a href="#" onclick="showSection('sales')" data-section="sales"
+          class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Point of Sale</a>
+        <a href="#" onclick="showSection('customers')" data-section="customers"
+          class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Customers</a>
+        <a href="#" onclick="showSection('orders')" data-section="orders"
+          class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Orders</a>
+
+          <div id="admin-nav" class="hidden space-y-1 pt-2">
+          <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin</div>
+          <a href="#" onclick="showSection('reports')" data-section="reports"
+            class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Reports</a>
+          <a href="#" onclick="showSection('staff')" data-section="staff"
+            class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-boutique-50 transition">Staff Management</a>
+        </div>
+      </nav>
+
+      <div class="p-4 border-t border-boutique-100">
+        <div class="flex items-center gap-3 mb-3">
+          <div id="user-avatar" class="w-9 h-9 rounded-full bg-boutique-200 flex items-center justify-center text-boutique-700 font-medium text-sm">?</div>
+          <div class="flex-1 min-w-0">
+            <p id="user-name" class="text-sm font-medium truncate">User</p>
+            <p id="user-role" class="text-xs text-gray-400 truncate">Role</p>
+          </div>
+        </div>
+        <button onclick="logout()" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto">
+      <header class="bg-white border-b border-boutique-100 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+        <div>
+          <h2 id="page-title" class="text-xl font-semibold text-gray-800">Dashboard</h2>
+          <p id="page-subtitle" class="font-subtitle text-sm text-gray-400">Welcome back</p>
+        </div>
+        <div id="connectivity-status" class="flex items-center gap-3 text-xs font-medium" aria-live="polite">
+          <span id="connectivity-label" class="inline-flex items-center gap-2 text-green-700"><span class="w-2 h-2 rounded-full bg-green-500"></span>Online</span>
+          <span id="pending-batch-count" class="text-gray-500"></span>
+          <button id="sync-pending-batches" onclick="syncPendingProductBatches()" class="hidden text-boutique-700 hover:underline">Sync now</button>
+        </div>
+      </header>
+
+      <div class="p-8">
+
+        <section id="customer-dashboard" class="section hidden">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="font-medium text-lg">Shop the collection</h3>
+              <p class="text-sm text-gray-500">Choose your items, then enter your delivery location at checkout.</p>
+            </div>
+            <span id="customer-cart-count" class="text-sm text-boutique-700 font-medium">0 items</span>
+          </div>
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="customer-product-grid"></div>
+            <div class="bg-white rounded-xl border border-boutique-100 p-6 h-fit sticky top-24">
+              <h3 class="font-medium mb-4">Your cart</h3>
+              <div id="customer-cart" class="space-y-3 mb-5 text-sm text-gray-400">Your cart is empty.</div>
+              <div class="border-t border-boutique-100 pt-4 space-y-2 text-sm">
+                <div class="flex justify-between"><span class="text-gray-500">Subtotal</span><span id="customer-subtotal">UGX 0</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Transport</span><span id="customer-transport">UGX 0</span></div>
+                <div class="flex justify-between font-semibold text-lg pt-2"><span>Total</span><span id="customer-total">UGX 0</span></div>
+              </div>
+              <form onsubmit="customerCheckout(event)" class="mt-5 space-y-3">
+                <input required id="shipping-details" placeholder="Delivery location, e.g. Lira City" class="w-full px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input id="shipping-country" value="Uganda" placeholder="Country" class="w-full px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <button type="button" onclick="previewTransport()" class="w-full border border-boutique-200 text-boutique-700 py-2 rounded-lg text-sm">Calculate transport</button>
+                <button type="submit" class="w-full bg-boutique-600 hover:bg-boutique-700 text-white py-2.5 rounded-lg font-medium">Place order</button>
+              </form>
+              <p id="customer-checkout-message" class="hidden mt-3 text-sm"></p>
+              <div id="customer-payment-panel" class="hidden mt-5 border-t border-boutique-100 pt-5 space-y-3">
+                <h4 class="font-medium">Authorize payment</h4>
+                <input id="payment-password" type="password" minlength="8" placeholder="Payment password (8+ characters)" class="w-full px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <button type="button" onclick="setPaymentPassword()" class="w-full border border-boutique-200 text-boutique-700 py-2 rounded-lg text-sm">Set / change payment password</button>
+                <select id="payment-method" class="w-full px-3 py-2 border border-boutique-100 rounded-lg text-sm"><option value="mtn_momo">MTN Mobile Money</option><option value="airtel_money">Airtel Money</option><option value="mpesa">M-Pesa</option><option value="cash_on_delivery">Cash on delivery</option></select>
+                <input id="payment-phone" placeholder="Mobile money phone number" class="w-full px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <button type="button" onclick="authorizePayment()" class="w-full bg-boutique-600 text-white py-2 rounded-lg text-sm">Authorize and pay</button>
+                <p id="payment-message" class="hidden text-sm"></p>
+              </div>
+            </div>
+          </div>
+          <div class="mt-8">
+            <div class="flex items-center justify-between mb-4">
+              <div><h3 class="font-medium text-lg">Order history</h3><p class="text-sm text-gray-500">Every order is kept here, including unsuccessful or reversed payments.</p></div>
+              <button onclick="loadCustomerOrders()" class="text-sm text-boutique-700 hover:underline">Refresh tracking</button>
+            </div>
+            <div id="customer-orders" class="space-y-4"><p class="text-sm text-gray-400">Loading your orders...</p></div>
+          </div>
+        </section>
+
+        <section id="dashboard" class="section hidden">
+          <div id="dashboard-admin-stats" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"></div>
+          <div id="dashboard-staff-note" class="hidden mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
+            You have access to Point of Sale, Products (view), Customers and Orders. Contact an admin for reports or staff management.
+          </div>
+          <p class="text-sm text-gray-400">Use the sidebar to get started.</p>
+        </section>
+
+        <section id="products" class="section hidden">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="font-medium text-lg">Products</h3>
+            <button id="btn-add-product" onclick="toggleAddProductForm()" class="hidden bg-boutique-600 hover:bg-boutique-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">+ Add Product</button>
+          </div>
+
+          <form id="add-product-form" onsubmit="submitAddProduct(event)" class="hidden bg-white rounded-xl border border-boutique-100 p-5 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div><h4 class="font-medium">Product details</h4><p class="text-xs text-gray-500 mt-1">Add up to 50 products in one batch. Each row needs a unique SKU.</p></div>
+              <button type="button" onclick="addProductEntry()" class="border border-boutique-200 text-boutique-700 px-3 py-2 rounded-lg text-sm">+ Add another product</button>
+            </div>
+            <div id="product-entry-rows" class="space-y-4"></div>
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-boutique-100 mt-5 pt-4">
+              <p id="product-batch-message" class="text-sm text-gray-500" role="status"></p>
+              <button type="submit" id="save-product-batch" class="bg-boutique-600 hover:bg-boutique-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Save product batch</button>
+            </div>
+          </form>
+
+          <template id="product-entry-template">
+            <fieldset class="product-entry border border-boutique-100 rounded-lg p-4">
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <legend class="product-entry-title font-medium text-sm text-gray-700">Product 1</legend>
+                <button type="button" data-remove-product class="text-xs text-red-600 hover:underline">Remove</button>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <input required data-field="name" placeholder="Product name" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input required data-field="sku" placeholder="SKU" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input data-field="barcode" placeholder="Barcode / QR value (optional)" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input data-field="category" placeholder="Category" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input required data-field="price" type="number" min="0.01" step="0.01" placeholder="Price (UGX)" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input data-field="size" placeholder="Size" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input data-field="age_range" placeholder="Age range" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input data-field="colour" placeholder="Colour / finish" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input data-field="stock_qty" type="number" min="0" step="1" placeholder="Stock quantity" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <textarea data-field="description" placeholder="Product description" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm sm:col-span-2"></textarea>
+                <label class="text-xs text-gray-500 sm:col-span-2">Product photos <input data-product-photos type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" class="block w-full mt-1 text-sm"></label>
+              </div>
+            </fieldset>
+          </template>
+
+          <div id="product-submissions-panel" class="hidden bg-white rounded-xl border border-boutique-100 overflow-hidden mb-6">
+            <div class="p-5 border-b border-boutique-100"><h3 class="font-medium">Product approvals</h3><p class="text-sm text-gray-500 mt-1">Review staff submissions before they appear in the shop.</p></div>
+            <table class="w-full text-sm">
+              <thead class="bg-boutique-50"><tr class="text-left text-gray-500"><th class="px-5 py-3">Product</th><th class="px-5 py-3">Submitted by</th><th class="px-5 py-3">Price</th><th class="px-5 py-3">Status</th><th class="px-5 py-3">Action</th></tr></thead>
+              <tbody id="product-submissions-tbody"><tr><td class="px-5 py-4 text-gray-400" colspan="5">Loading...</td></tr></tbody>
+            </table>
+          </div>
+
+          <div class="bg-white rounded-xl border border-boutique-100 overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-boutique-50">
+                <tr class="text-left text-gray-500">
+                  <th class="px-6 py-3 font-medium">Product</th>
+                  <th class="px-6 py-3 font-medium">Photo</th>
+                  <th class="px-6 py-3 font-medium">Description</th>
+                  <th class="px-6 py-3 font-medium">SKU</th>
+                  <th class="px-6 py-3 font-medium">Category</th>
+                  <th class="px-6 py-3 font-medium">Price</th>
+                  <th class="px-6 py-3 font-medium">Stock</th>
+                  <th class="px-6 py-3 font-medium">Status</th>
+                  <th class="px-6 py-3 font-medium">Rating</th>
+                </tr>
+              </thead>
+              <tbody id="products-tbody" class="divide-y divide-boutique-50">
+                <tr><td class="px-6 py-4 text-gray-400" colspan="9">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="sales" class="section hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-white rounded-xl border border-boutique-100 p-6">
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div><h3 class="font-medium">Walk-in sales</h3><p id="shift-status" class="text-xs text-gray-500 mt-1">Checking shift...</p></div>
+                <div class="flex flex-wrap gap-2 items-center">
+                  <input id="shift-opening-cash" type="number" min="0" step="1" placeholder="Opening cash" class="w-32 px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                  <button onclick="openShift()" class="border border-boutique-200 text-boutique-700 px-3 py-2 rounded-lg text-sm">Open shift</button>
+                  <input id="shift-closing-cash" type="number" min="0" step="1" placeholder="Closing cash" class="w-32 px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                  <button onclick="closeShift()" class="border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">Close shift</button>
+                </div>
+              </div>
+              <div class="flex gap-2 mb-4">
+                <input id="product-code-lookup" placeholder="Scan or enter barcode / SKU" class="flex-1 px-3 py-2 border border-boutique-100 rounded-lg text-sm" onkeydown="if(event.key === 'Enter'){event.preventDefault(); lookupProductCode();}">
+                <button onclick="lookupProductCode()" class="bg-boutique-600 text-white px-3 py-2 rounded-lg text-sm">Find product</button>
+                <button id="scan-code-button" onclick="scanProductCode()" class="border border-boutique-200 text-boutique-700 px-3 py-2 rounded-lg text-sm">Scan</button>
+              </div>
+              <div id="pos-product-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-boutique-100 p-6">
+              <h3 class="font-medium mb-4">Current Cart</h3>
+              <div id="pos-cart" class="space-y-3 mb-6 max-h-64 overflow-y-auto text-sm text-gray-400">Cart is empty</div>
+              <div class="border-t border-boutique-100 pt-4 space-y-2 text-sm">
+                <div class="flex justify-between"><span class="text-gray-500">Subtotal</span><span id="pos-subtotal">UGX 0</span></div>
+                <div class="flex justify-between font-semibold text-lg pt-2"><span>Total</span><span id="pos-total">UGX 0</span></div>
+              </div>
+              <div class="mt-5 space-y-2">
+                <input id="pos-customer-name" placeholder="Walk-in customer name (optional)" class="w-full px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input id="pos-customer-phone" placeholder="Customer phone (optional)" class="w-full px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+                <input id="pos-customer-email" type="email" placeholder="Customer email (optional)" class="w-full px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+              </div>
+              <div id="pos-error" class="hidden mt-3 text-xs text-red-600"></div>
+              <div id="pos-receipt" class="hidden mt-4 border border-dashed border-boutique-200 rounded-lg p-4 text-sm"></div>
+              <button onclick="completeSale()" class="w-full mt-6 bg-boutique-600 hover:bg-boutique-700 text-white py-3 rounded-lg font-medium transition">Complete Sale</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="customers" class="section hidden">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="font-medium text-lg">Customers</h3>
+            <button onclick="toggleAddCustomerForm()" class="bg-boutique-600 hover:bg-boutique-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Add Customer</button>
+          </div>
+          <form id="add-customer-form" onsubmit="submitAddCustomer(event)" class="hidden bg-white rounded-xl border border-boutique-100 p-6 mb-6 grid grid-cols-1 md:grid-cols-4 gap-3">
+            <input required placeholder="Name" id="nc-name" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+            <input placeholder="Phone" id="nc-phone" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+            <input placeholder="Email" id="nc-email" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+            <button type="submit" class="bg-boutique-600 hover:bg-boutique-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Save</button>
+          </form>
+          <div class="bg-white rounded-xl border border-boutique-100 overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-boutique-50">
+                <tr class="text-left text-gray-500">
+                  <th class="px-6 py-3 font-medium">Name</th>
+                  <th class="px-6 py-3 font-medium">Phone</th>
+                  <th class="px-6 py-3 font-medium">Email</th>
+                  <th class="px-6 py-3 font-medium">Total Spent</th>
+                </tr>
+              </thead>
+              <tbody id="customers-tbody" class="divide-y divide-boutique-50">
+                <tr><td class="px-6 py-4 text-gray-400" colspan="4">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="orders" class="section hidden">
+          <div class="bg-white rounded-xl border border-boutique-100 overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-boutique-50">
+                <tr class="text-left text-gray-500">
+                  <th class="px-6 py-3 font-medium">Order</th>
+                  <th class="px-6 py-3 font-medium">Client</th>
+                  <th class="px-6 py-3 font-medium">Date</th>
+                  <th class="px-6 py-3 font-medium">Products</th>
+                  <th class="px-6 py-3 font-medium">Total</th>
+                  <th class="px-6 py-3 font-medium">Status</th>
+                  <th class="px-6 py-3 font-medium">Fulfilment</th>
+                  <th class="px-6 py-3 font-medium">Payment / Account</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody" class="divide-y divide-boutique-50">
+                <tr><td class="px-6 py-4 text-gray-400" colspan="8">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="reports" class="section hidden">
+          <div class="flex flex-col items-center gap-4 mb-4 text-center">
+            <div><h3 class="font-medium text-lg">BETHEL BOUTIQUE</h3><p class="text-sm text-gray-500">Where Beauty Meets Elegance · Operations report</p><p class="text-xs text-gray-500 mt-1">Period: <span id="report-screen-period"></span> · Prepared by: <span id="report-screen-staff"></span></p></div>
+            <div class="no-print flex flex-wrap justify-center items-center gap-2">
+              <label class="text-sm text-gray-500" for="report-start-date">From</label>
+              <input id="report-start-date" type="date" onchange="loadReports()" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+              <label class="text-sm text-gray-500" for="report-end-date">To</label>
+              <input id="report-end-date" type="date" onchange="loadReports()" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+              <button onclick="printReport()" class="bg-boutique-600 hover:bg-boutique-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Print / Save PDF</button>
+            </div>
+          </div>
+          <div class="hidden print:block mb-6 text-center"><h1 class="text-2xl font-semibold">BETHEL BOUTIQUE</h1><p class="text-gray-500">Where Beauty Meets Elegance</p><p class="text-gray-500">Operations report</p><p class="text-gray-700 mt-2">Report period: <strong id="report-print-period"></strong></p><p class="text-gray-700">Printed by: <strong id="report-print-staff"></strong></p></div>
+          <div id="reports-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center bg-white rounded-xl border border-boutique-100 p-6"></div>
+          <div id="reports-breakdown" class="mt-4 bg-white rounded-xl border border-boutique-100 p-6 text-sm"></div>
+          <div class="flex justify-between gap-16 mt-8 text-sm">
+            <div class="flex-1 border-t border-gray-700 pt-2">Staff signature</div>
+            <div class="w-48 border-t border-gray-700 pt-2">Official stamp</div>
+          </div>
+        </section>
+
+        <section id="staff" class="section hidden">
+          <div id="staff-create-panel" class="hidden bg-white rounded-xl border border-boutique-100 p-6 mb-6">
+            <h3 class="font-medium mb-4">Create staff account</h3>
+            <form onsubmit="submitCreateStaff(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <input required id="ns-name" placeholder="Full name" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+              <input required id="ns-email" type="email" placeholder="Email" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+              <input required id="ns-password" type="password" placeholder="Temporary password" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm">
+              <select id="ns-role" class="px-3 py-2 border border-boutique-100 rounded-lg text-sm"><option value="staff">Staff</option><option value="owner">Super admin</option></select>
+              <button type="submit" class="bg-boutique-600 hover:bg-boutique-700 text-white px-4 py-2 rounded-lg text-sm font-medium md:col-span-1">Create account</button>
+            </form>
+          </div>
+          <div class="bg-white rounded-xl border border-boutique-100 overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-boutique-50">
+                <tr class="text-left text-gray-500">
+                  <th class="px-6 py-3 font-medium">Name</th>
+                  <th class="px-6 py-3 font-medium">Email</th>
+                  <th class="px-6 py-3 font-medium">Role</th>
+                  <th class="px-6 py-3 font-medium">Active</th>
+                  <th class="px-6 py-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="staff-tbody" class="divide-y divide-boutique-50">
+                <tr><td class="px-6 py-4 text-gray-400" colspan="5">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let cart = [];
+    let productCache = [];
+    let guestProducts = [];
+    let lastCustomerOrderId = null;
+    const PRODUCT_CATALOG_CACHE_KEY = 'bethel-product-catalog-v1';
+    const PRODUCT_BATCH_QUEUE_KEY = 'bethel-product-batches-v1';
+    const OFFLINE_USER_CACHE_KEY = 'bethel-offline-user-v1';
+    let syncingProductBatches = false;
+
+    const ERROR_MESSAGES = {
+      not_authorized: "That Google account isn't linked to a staff login. Ask an admin to add you first.",
+      google_no_email: "Google didn't share an email address — try a different account.",
+    };
+
+    function setLoginTab(tab) {
+      const staffTab = document.getElementById('tab-staff');
+      const customerTab = document.getElementById('tab-customer');
+      document.getElementById('guest-shop').classList.toggle('hidden', tab !== 'customer');
+      document.getElementById('panel-staff').classList.toggle('hidden', tab !== 'staff');
+      document.getElementById('panel-customer').classList.toggle('hidden', tab !== 'customer');
+      staffTab.classList.toggle('bg-white', tab === 'staff');
+      staffTab.classList.toggle('shadow', tab === 'staff');
+      staffTab.classList.toggle('text-boutique-700', tab === 'staff');
+      staffTab.classList.toggle('text-gray-500', tab !== 'staff');
+      customerTab.classList.toggle('bg-white', tab === 'customer');
+      customerTab.classList.toggle('shadow', tab === 'customer');
+      customerTab.classList.toggle('text-boutique-700', tab === 'customer');
+      customerTab.classList.toggle('text-gray-500', tab !== 'customer');
+    }
+
+    async function loadGuestShop() {
+      const search = document.getElementById('guest-search').value.trim();
+      const category = document.getElementById('guest-category').value;
+      const catalog = await apiGet('/api/products');
+      guestProducts = catalog.filter(product => (!search || product.name.toLowerCase().includes(search.toLowerCase())) && (!category || product.category === category));
+      const categorySelect = document.getElementById('guest-category');
+      if (categorySelect.options.length === 1) {
+        [...new Set(guestProducts.map(p => p.category))].forEach(categoryName => categorySelect.add(new Option(categoryName, categoryName)));
+      }
+      document.getElementById('guest-product-grid').innerHTML = guestProducts.flatMap(product => product.variants.filter(v => v.available_stock > 0).map(variant => `<article class="border border-boutique-100 rounded-xl overflow-hidden"><img src="${product.images[0] || ''}" class="w-full h-36 object-cover ${product.images[0] ? '' : 'hidden'}" alt="${product.name}"><div class="p-3"><h3 class="font-medium">${product.name}</h3><p class="text-xs text-gray-500">${[variant.size, variant.colour, variant.age_range].filter(Boolean).join(' / ')}</p><p class="font-semibold mt-2">${fmt(variant.price)}</p><button ${navigator.onLine ? '' : 'disabled'} onclick="addGuestCart(${variant.id})" class="mt-3 w-full bg-boutique-600 text-white py-2 rounded-lg text-xs disabled:opacity-50">${navigator.onLine ? 'Add to cart' : 'Online required'}</button></div></article>`)).join('') || '<p class="text-gray-500">No matching products.</p>';
+      if (navigator.onLine) await renderGuestCart();
+      else {
+        document.getElementById('guest-cart').textContent = 'Cart and checkout are available when you reconnect.';
+        document.getElementById('guest-total').textContent = fmt(0);
+      }
+    }
+
+    async function addGuestCart(variantId) { if (!navigator.onLine) return; await apiPost('/api/cart/add', {variant_id: variantId, quantity: 1}); await renderGuestCart(); }
+    async function renderGuestCart() { const data = await apiGet('/api/cart'); const items = data.items || []; document.getElementById('guest-cart').innerHTML = items.length ? items.map(item => `<div class="flex justify-between"><span>${item.product_name} x${item.quantity}</span><span>${fmt(item.unit_price * item.quantity)}</span></div>`).join('') : 'Your cart is empty.'; document.getElementById('guest-total').textContent = fmt(items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0)); }
+    function guestCheckoutPrompt() { setLoginTab('customer'); const message = document.getElementById('customer-login-message'); message.textContent = 'Create or sign in to your customer account to continue with this cart.'; message.className = 'text-sm text-center mt-4 text-boutique-700'; document.getElementById('login-page').scrollIntoView({behavior: 'smooth'}); }
+
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById('login-password');
+      const toggleButton = passwordInput.previousElementSibling.querySelector('button');
+      const isVisible = passwordInput.type === 'text';
+      passwordInput.type = isVisible ? 'password' : 'text';
+      toggleButton.textContent = isVisible ? 'Show password' : 'Hide password';
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errorEl = document.getElementById('login-error');
+      const submitBtn = document.getElementById('login-submit');
+      submitBtn.disabled = true;
+      try {
+        const res = await fetch('/api/auth/staff-login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email, password})
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          errorEl.textContent = body.error || 'Invalid email or password.';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+        errorEl.classList.add('hidden');
+        const meRes = await fetch('/api/auth/me');
+        if (!meRes.ok) throw new Error('Could not load the signed-in user.');
+        currentUser = await meRes.json();
+        showApp();
+      } catch (err) {
+        errorEl.textContent = 'Could not reach the server. Try again.';
+        errorEl.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    async function requestCustomerOtp(e) {
+      e.preventDefault();
+      const messageEl = document.getElementById('customer-login-message');
+      try {
+        const body = await apiPost('/api/auth/otp/request', {
+          phone: document.getElementById('customer-phone').value.trim(),
+        });
+        messageEl.textContent = `Verification code sent. Demo code: ${body.debug_otp}`;
+        messageEl.className = 'text-sm text-center mt-4 text-green-600';
+      } catch (err) {
+        messageEl.textContent = err.message;
+        messageEl.className = 'text-sm text-center mt-4 text-red-600';
+      }
+    }
+
+    async function verifyCustomerOtp(e) {
+      e.preventDefault();
+      const messageEl = document.getElementById('customer-login-message');
+      try {
+        await apiPost('/api/auth/otp/verify', {
+          phone: document.getElementById('customer-phone').value.trim(),
+          code: document.getElementById('customer-otp').value.trim(),
+          name: document.getElementById('customer-name').value.trim(),
+        });
+        currentUser = await apiGet('/api/auth/me');
+        showApp();
+      } catch (err) {
+        messageEl.textContent = err.message;
+        messageEl.className = 'text-sm text-center mt-4 text-red-600';
+      }
+    }
+
+    async function logout() {
+      if (navigator.onLine) {
+        try { await fetch('/api/auth/logout', {method: 'POST'}); } catch (err) { }
+      }
+      localStorage.removeItem(OFFLINE_USER_CACHE_KEY);
+      currentUser = null;
+      cart = [];
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('login-page').classList.remove('hidden');
+      document.getElementById('login-form').reset();
+    }
+
+    async function tryRestoreSession() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          currentUser = await res.json();
+          showApp();
+        }
+      } catch (err) {
+        if (!navigator.onLine) {
+          try {
+            currentUser = JSON.parse(localStorage.getItem(OFFLINE_USER_CACHE_KEY) || 'null');
+            if (currentUser && currentUser.id && currentUser.role) showApp();
+          } catch (cacheError) { currentUser = null; }
+        }
+      }
+    }
+
+    function showApp() {
+      document.getElementById('login-page').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      try { localStorage.setItem(OFFLINE_USER_CACHE_KEY, JSON.stringify({id: currentUser.id, name: currentUser.name, role: currentUser.role})); } catch (err) { }
+
+      document.getElementById('user-name').textContent = currentUser.name;
+      document.getElementById('user-role').textContent = currentUser.role === 'owner' ? 'Super Administrator' : (currentUser.role === 'client' ? 'Customer' : 'Staff Member');
+      document.getElementById('user-avatar').textContent = (currentUser.name || '?').slice(0,2).toUpperCase();
+      document.getElementById('page-subtitle').textContent = `Welcome back, ${(currentUser.name || '').split(' ')[0]}`;
+
+      const isAdmin = currentUser.role === 'owner';
+      const isStaff = currentUser.role === 'staff' || isAdmin;
+      const isCustomer = currentUser.role === 'client';
+      document.querySelector('nav').classList.toggle('hidden', isCustomer);
+      document.getElementById('admin-nav').classList.toggle('hidden', !isStaff);
+      const addProductButton = document.getElementById('btn-add-product');
+      const staffCreatePanel = document.getElementById('staff-create-panel');
+      if (addProductButton) {
+        addProductButton.classList.toggle('hidden', !isStaff);
+        addProductButton.textContent = isAdmin ? '+ Add Products' : 'Submit Product Batch';
+      }
+      if (staffCreatePanel) staffCreatePanel.classList.toggle('hidden', !isAdmin);
+      document.getElementById('product-submissions-panel').classList.toggle('hidden', !isStaff);
+
+      showSection(isCustomer ? 'customer-dashboard' : 'dashboard');
+      updateConnectivityStatus();
+    }
+
+    async function showSection(id) {
+      if (id === 'customer-dashboard' && currentUser.role !== 'client') id = 'dashboard';
+      const restricted = ['staff'];
+      if (restricted.includes(id) && currentUser.role !== 'owner') {
+        id = 'dashboard';
+      }
+
+      document.querySelectorAll('.section').forEach(sec => sec.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+
+      document.querySelectorAll('.sidebar-link').forEach(link => {
+        link.classList.toggle('active', link.dataset.section === id);
+      });
+
+      const titles = {dashboard:'Dashboard', products:'Products', sales:'Point of Sale', customers:'Customers', orders:'Orders', reports:'Reports', staff:'Staff Management'};
+      document.getElementById('page-title').textContent = id === 'customer-dashboard' ? 'Shop' : (titles[id] || 'Dashboard');
+
+      if (id === 'customer-dashboard') await loadCustomerShop();
+      if (id === 'dashboard') await loadDashboard();
+      if (id === 'products') await loadProducts();
+      if (id === 'sales') await loadPos();
+      if (id === 'customers') await loadCustomers();
+      if (id === 'orders') await loadOrders();
+      if (id === 'reports') await loadReports();
+      if (id === 'staff') await loadStaff();
+    }
+
+    function fmt(n) { return 'UGX ' + Number(n || 0).toLocaleString(); }
+
+    async function loadCustomerShop() {
+      const grid = document.getElementById('customer-product-grid');
+      try {
+        const products = await apiGet('/api/products');
+        productCache = products;
+        grid.innerHTML = products.flatMap(product => product.variants.filter(v => v.available_stock > 0).map(variant => `
+          <article class="bg-white rounded-xl border border-boutique-100 overflow-hidden">
+            ${product.images[0] ? `<img src="${product.images[0]}" alt="${product.name}" class="w-full h-44 object-cover">` : '<div class="h-44 bg-boutique-50 flex items-center justify-center text-sm text-gray-400">No photo</div>'}
+            <div class="p-4">
+              <h4 class="font-medium">${product.name}</h4>
+              <p class="text-xs text-gray-500 mt-1">${[variant.size, variant.colour, variant.age_range].filter(Boolean).join(' / ')}</p>
+              <p class="text-sm text-gray-600 mt-2">${product.description || ''}</p>
+              <div class="flex items-center justify-between mt-4"><span class="font-semibold">${fmt(variant.price)}</span><button ${navigator.onLine ? '' : 'disabled'} onclick="addCustomerCart(${variant.id})" class="bg-boutique-600 text-white px-3 py-2 rounded-lg text-xs disabled:opacity-50">${navigator.onLine ? 'Add to cart' : 'Online required'}</button></div>
+            </div>
+          </article>`)).join('') || '<p class="text-gray-500">No products are available right now.</p>';
+        if (navigator.onLine) {
+          await renderCustomerCart();
+          await loadCustomerOrders();
+        } else {
+          document.getElementById('customer-cart').textContent = 'Cart and checkout are available when you reconnect.';
+          document.getElementById('customer-orders').innerHTML = '<p class="text-sm text-gray-500">Order history is available when you reconnect.</p>';
+        }
+      } catch (err) { grid.innerHTML = `<p class="text-red-600">${err.message}</p>`; }
+    }
+
+    async function loadCustomerOrders() {
+      const ordersEl = document.getElementById('customer-orders');
+      if (!ordersEl) return;
+      try {
+        const orders = await apiGet('/api/orders/mine');
+        const details = await Promise.all(orders.map(async order => ({order: await apiGet(`/api/orders/${order.id}`), payments: await apiGet(`/api/payments/orders/${order.id}`)})));
+        ordersEl.innerHTML = details.length ? details.map(entry => {
+          const order = entry.order;
+          const payments = entry.payments.length ? entry.payments : (orders.find(item => item.id === order.id).payments || []);
+          const shipment = order.shipment_updates || [];
+          const statusLabel = order.status.replaceAll('_', ' ');
+          const timeline = shipment.length ? shipment.map(update => `<li><span class="font-medium capitalize">${update.stage.replaceAll('_', ' ')}</span><span class="text-gray-400"> · ${(update.created_at || '').slice(0, 10)}</span>${update.note ? `<p class="text-xs text-gray-500">${update.note}</p>` : ''}</li>`).join('') : '<li class="text-gray-400">Awaiting fulfilment updates from the shop.</li>';
+          const paymentText = payments.length ? payments.map(payment => `${payment.method.replaceAll('_', ' ')}: ${payment.status === 'failed' ? 'unsuccessful' : payment.status} · ${payment.transaction_id || 'pending'}`).join('<br>') : 'No payment recorded';
+          const itemDetails = order.items.map(item => `<li><strong>${item.product_name}</strong> · ${item.sku} · ${[item.size, item.colour].filter(Boolean).join(' / ') || 'Standard'} · Qty ${item.quantity} · ${fmt(item.unit_price * item.quantity)}</li>`).join('');
+          return `<article class="bg-white border border-boutique-100 rounded-xl p-5"><div class="flex flex-wrap items-center justify-between gap-3"><div><h4 class="font-medium">Order #ORD-${order.id}</h4><p class="text-xs text-gray-400">Placed ${(orders.find(item => item.id === order.id).created_at || '').slice(0, 10)}</p></div><span class="px-3 py-1 rounded-full bg-boutique-50 text-boutique-700 text-xs capitalize">${statusLabel}</span></div><div class="grid grid-cols-2 gap-3 mt-4 text-sm"><span class="text-gray-500">Order total</span><strong>${fmt(order.total)}</strong><span class="text-gray-500">Products</span><ul class="col-span-2 list-disc pl-5 space-y-1">${itemDetails}</ul><span class="text-gray-500">Payment</span><span>${paymentText}</span></div><ol class="mt-4 border-l-2 border-boutique-200 pl-4 space-y-2 text-sm">${timeline}</ol></article>`;
+        }).join('') : '<p class="text-sm text-gray-400">You have not placed any orders yet.</p>';
+      } catch (err) { ordersEl.innerHTML = `<p class="text-sm text-red-600">${err.message}</p>`; }
+    }
+
+    async function addCustomerCart(variantId) {
+      if (!navigator.onLine) return;
+      try { await apiPost('/api/cart/add', {variant_id: variantId, quantity: 1}); await renderCustomerCart(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function renderCustomerCart() {
+      if (!navigator.onLine) return;
+      const data = await apiGet('/api/cart');
+      const cartEl = document.getElementById('customer-cart');
+      const items = data.items || [];
+      const subtotal = items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+      document.getElementById('customer-cart-count').textContent = `${items.reduce((sum, item) => sum + item.quantity, 0)} items`;
+      cartEl.innerHTML = items.length ? items.map(item => `<div class="flex justify-between gap-3"><span>${item.product_name} x ${item.quantity}</span><button onclick="removeCustomerCart(${item.variant_id})" class="text-red-600 text-xs">Remove</button><span>${fmt(item.unit_price * item.quantity)}</span></div>`).join('') : 'Your cart is empty.';
+      document.getElementById('customer-subtotal').textContent = fmt(subtotal);
+      document.getElementById('customer-total').textContent = fmt(subtotal + Number(document.getElementById('customer-transport').dataset.value || 0));
+    }
+
+    async function removeCustomerCart(variantId) {
+      await apiPost('/api/cart/remove', {variant_id: variantId});
+      await renderCustomerCart();
+    }
+
+    async function previewTransport() {
+      const message = document.getElementById('customer-checkout-message');
+      if (!navigator.onLine) { message.textContent = 'Reconnect to calculate transport.'; message.className = 'mt-3 text-sm text-amber-700'; return; }
+      try {
+        const result = await apiPost('/api/orders/transport-preview', {details: document.getElementById('shipping-details').value, country: document.getElementById('shipping-country').value});
+        const transport = document.getElementById('customer-transport');
+        transport.dataset.value = result.transport_charge;
+        transport.textContent = fmt(result.transport_charge);
+        message.textContent = result.message;
+        message.className = 'mt-3 text-sm text-green-600';
+        await renderCustomerCart();
+      } catch (err) { message.textContent = err.message; message.className = 'mt-3 text-sm text-red-600'; }
+    }
+
+    async function customerCheckout(event) {
+      event.preventDefault();
+      const message = document.getElementById('customer-checkout-message');
+      if (!navigator.onLine) { message.textContent = 'Reconnect to place an order.'; message.className = 'mt-3 text-sm text-amber-700'; return; }
+      try {
+        const address = await apiPost('/api/orders/addresses', {details: document.getElementById('shipping-details').value, country: document.getElementById('shipping-country').value});
+        const order = await apiPost('/api/orders/checkout', {address_id: address.id});
+        lastCustomerOrderId = order.order_id;
+        message.textContent = `Order #${order.order_id} placed. Total: ${fmt(order.total)}`;
+        message.className = 'mt-3 text-sm text-green-600';
+        document.getElementById('customer-payment-panel').classList.remove('hidden');
+        document.getElementById('customer-transport').dataset.value = '0';
+        await renderCustomerCart();
+        await loadCustomerOrders();
+      } catch (err) { message.textContent = err.message; message.className = 'mt-3 text-sm text-red-600'; }
+    }
+
+    async function setPaymentPassword() {
+      const message = document.getElementById('payment-message');
+      try {
+        await apiPost('/api/auth/set-password', {password: document.getElementById('payment-password').value});
+        message.textContent = 'Payment password saved.';
+        message.className = 'text-sm text-green-600';
+      } catch (err) { message.textContent = err.message; message.className = 'text-sm text-red-600'; }
+    }
+
+    async function authorizePayment() {
+      const message = document.getElementById('payment-message');
+      if (!navigator.onLine) { message.textContent = 'Reconnect to authorize payment.'; message.className = 'text-sm text-amber-700'; return; }
+      const password = document.getElementById('payment-password').value;
+      const method = document.getElementById('payment-method').value;
+      try {
+        let result;
+        if (method === 'cash_on_delivery') {
+          result = await apiPost(`/api/payments/${lastCustomerOrderId}/cash-on-delivery`, {password});
+        } else {
+          result = await apiPost(`/api/payments/${lastCustomerOrderId}/initiate`, {method, phone: document.getElementById('payment-phone').value, password});
+        }
+        const receipt = result.receipt || {};
+        message.textContent = `${result.message}. Transaction ${receipt.transaction_id || result.transaction_id || ''} Receipt ${receipt.receipt_id || ''}`;
+        message.className = 'text-sm text-green-600';
+        await loadCustomerOrders();
+      } catch (err) { message.textContent = err.message; message.className = 'text-sm text-red-600'; }
+    }
+
+    async function apiGet(url) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+        const data = await res.json();
+        const requestedUrl = new URL(url, location.href);
+        if (requestedUrl.pathname === '/api/products' && requestedUrl.search === '' && Array.isArray(data)) {
+          try { localStorage.setItem(PRODUCT_CATALOG_CACHE_KEY, JSON.stringify(data)); } catch (err) { }
+        }
+        return data;
+      } catch (err) {
+        if (!navigator.onLine && new URL(url, location.href).pathname === '/api/products') {
+          try {
+            const cached = JSON.parse(localStorage.getItem(PRODUCT_CATALOG_CACHE_KEY) || 'null');
+            if (Array.isArray(cached)) return cached;
+          } catch (cacheError) { }
+        }
+        throw err;
+      }
+    }
+    async function apiPost(url, data) {
+      const res = await fetch(url, {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)});
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || res.statusText);
+      return body;
+    }
+
+    function getPendingProductBatches() {
+      try {
+        const batches = JSON.parse(localStorage.getItem(PRODUCT_BATCH_QUEUE_KEY) || '[]');
+        return Array.isArray(batches) ? batches : [];
+      } catch (err) { return []; }
+    }
+
+    function savePendingProductBatches(batches) {
+      localStorage.setItem(PRODUCT_BATCH_QUEUE_KEY, JSON.stringify(batches));
+      updateConnectivityStatus();
+    }
+
+    function updateConnectivityStatus() {
+      const label = document.getElementById('connectivity-label');
+      const pendingCount = document.getElementById('pending-batch-count');
+      const syncButton = document.getElementById('sync-pending-batches');
+      const online = navigator.onLine;
+      const guestLabel = document.getElementById('guest-connectivity-label');
+      if (guestLabel) {
+        guestLabel.textContent = online ? 'Online' : 'Offline · browsing available, checkout paused';
+        guestLabel.className = `text-xs mt-1 ${online ? 'text-green-700' : 'text-amber-700'}`;
+      }
+      if (!label || !pendingCount || !syncButton) return;
+      label.className = `inline-flex items-center gap-2 ${online ? 'text-green-700' : 'text-amber-700'}`;
+      label.innerHTML = `<span class="w-2 h-2 rounded-full ${online ? 'bg-green-500' : 'bg-amber-500'}"></span>${online ? 'Online' : 'Offline'}`;
+      const count = getPendingProductBatches().length;
+      pendingCount.textContent = count ? `${count} batch${count === 1 ? '' : 'es'} waiting` : '';
+      syncButton.classList.toggle('hidden', !online || count === 0);
+    }
+
+    async function syncPendingProductBatches() {
+      if (!navigator.onLine || syncingProductBatches) return;
+      syncingProductBatches = true;
+      try {
+        const sessionResponse = await fetch('/api/auth/me');
+        if (!sessionResponse.ok) return;
+        currentUser = await sessionResponse.json();
+        const batches = getPendingProductBatches();
+        const matchingBatches = batches.filter(batch => batch.user_id === currentUser.id && ((batch.operation === 'publish') === (currentUser.role === 'owner')));
+        if (!matchingBatches.length) return;
+        if (!confirm(`Sync ${matchingBatches.length} saved product batch${matchingBatches.length === 1 ? '' : 'es'} now? Owner batches publish immediately; staff batches go to approval.`)) return;
+        for (const batch of batches) {
+          if (batch.user_id !== currentUser.id) continue;
+          const isOwner = currentUser.role === 'owner';
+          if ((batch.operation === 'publish') !== isOwner) continue;
+          const endpoint = isOwner ? '/api/products/batch' : '/api/products/submissions/batch';
+          try {
+            await apiPost(endpoint, {batch_id: batch.batch_id, products: batch.products});
+            savePendingProductBatches(getPendingProductBatches().filter(item => item.batch_id !== batch.batch_id || item.user_id !== batch.user_id));
+          } catch (err) {
+            batch.last_error = err.message;
+            const currentQueue = getPendingProductBatches();
+            const failedBatch = currentQueue.find(item => item.batch_id === batch.batch_id && item.user_id === batch.user_id);
+            if (failedBatch) failedBatch.last_error = err.message;
+            savePendingProductBatches(currentQueue);
+            break;
+          }
+        }
+      } catch (err) { }
+      finally {
+        syncingProductBatches = false;
+        updateConnectivityStatus();
+      }
+    }
+
+    function initializeConnectivity() {
+      updateConnectivityStatus();
+      const refreshForConnectivity = () => {
+        updateConnectivityStatus();
+        if (!document.getElementById('login-page').classList.contains('hidden')) loadGuestShop();
+        if (currentUser && currentUser.role === 'client' && !document.getElementById('customer-dashboard').classList.contains('hidden')) loadCustomerShop();
+      };
+      window.addEventListener('online', refreshForConnectivity);
+      window.addEventListener('offline', refreshForConnectivity);
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js').catch(() => {}));
+      }
+    }
+
+    async function loadDashboard() {
+      const isAdmin = currentUser.role === 'owner';
+      document.getElementById('dashboard-staff-note').classList.toggle('hidden', isAdmin);
+      const statsEl = document.getElementById('dashboard-admin-stats');
+      statsEl.classList.toggle('hidden', !isAdmin);
+      if (!isAdmin) return;
+      try {
+        const summary = await apiGet('/api/admin/reports/summary');
+        statsEl.innerHTML = `
+          <div class="card bg-white rounded-xl p-6 border border-boutique-100"><p class="text-sm text-gray-500">Total Sales</p><p class="text-2xl font-semibold mt-1">${fmt(summary.total_sales)}</p></div>
+          <div class="card bg-white rounded-xl p-6 border border-boutique-100"><p class="text-sm text-gray-500">Orders</p><p class="text-2xl font-semibold mt-1">${summary.order_count}</p></div>
+          <div class="card bg-white rounded-xl p-6 border border-boutique-100"><p class="text-sm text-gray-500">Avg. Order Value</p><p class="text-2xl font-semibold mt-1">${fmt(summary.avg_order_value)}</p></div>
+          <div class="card bg-white rounded-xl p-6 border border-boutique-100"><p class="text-sm text-gray-500">Low Stock Items</p><p class="text-2xl font-semibold mt-1 text-amber-600">${summary.low_stock_count}</p></div>`;
+      } catch (err) { /* non-admin shouldn't hit this anyway */ }
+    }
+
+    async function loadProducts() {
+      const tbody = document.getElementById('products-tbody');
+      try {
+        productCache = await apiGet('/api/products');
+        tbody.innerHTML = productCache.reduce((rows, p) => rows.concat(p.variants.map(v => {
+          const variantLabel = [v.size, v.colour].filter(Boolean).join(' / ');
+          const productLabel = p.name + (variantLabel ? ' (' + variantLabel + ')' : '');
+          const photoCell = p.images[0] ? '<img src="' + p.images[0] + '" alt="' + p.name + '" class="w-12 h-12 object-cover rounded-lg">' : '<span class="text-gray-400">No photo</span>';
+          const stockClass = v.available_stock > 0 ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700';
+          const stockLabel = v.available_stock > 0 ? 'In Stock' : 'Out of Stock';
+          const ratingText = p.rating.average ? p.rating.average + '/5 (' + p.rating.count + ')' : 'No ratings';
+          return `<tr>
+            <td class="px-6 py-4 font-medium">${productLabel}</td>
+            <td class="px-6 py-4">${photoCell}</td>
+            <td class="px-6 py-4 max-w-xs text-gray-600">${p.description || '—'}</td>
+            <td class="px-6 py-4 text-gray-500">${v.sku}</td>
+            <td class="px-6 py-4">${p.category || '—'}</td>
+            <td class="px-6 py-4">${fmt(v.price)}</td>
+            <td class="px-6 py-4"><div>${v.available_stock}</div><button onclick="submitStockCount(${v.id})" class="text-xs text-boutique-700 hover:underline">Count stock</button></td>
+            <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs ${stockClass}">${stockLabel}</span></td>
+            <td class="px-6 py-4">${ratingText}</td>
+          </tr>`;
+        })), []).join('') || '<tr><td class="px-6 py-4 text-gray-400" colspan="9">No products yet.</td></tr>';
+      } catch (err) {
+        tbody.innerHTML = `<tr><td class="px-6 py-4 text-red-600" colspan="6">${err.message}</td></tr>`;
+      }
+      await loadProductSubmissions();
+    }
+
+    async function loadProductSubmissions() {
+      const tbody = document.getElementById('product-submissions-tbody');
+      if (!tbody || !currentUser || currentUser.role === 'client') return;
+      try {
+        const submissions = await apiGet('/api/admin/product-submissions');
+        tbody.innerHTML = submissions.map(s => {
+          const p = s.payload || {};
+          const action = currentUser.role === 'owner' && s.status === 'pending'
+            ? `<button onclick="reviewProductSubmission(${s.id}, true)" class="text-green-700 hover:underline mr-2">Approve</button><button onclick="reviewProductSubmission(${s.id}, false)" class="text-red-600 hover:underline">Reject</button>`
+            : '<span class="text-gray-400">No action</span>';
+          return `<tr><td class="px-5 py-4 font-medium">${p.name || 'Unnamed'}<div class="text-xs text-gray-400">${p.sku || ''}</div></td><td class="px-5 py-4">${s.submitted_by_name}</td><td class="px-5 py-4">${fmt(p.price)}</td><td class="px-5 py-4 capitalize">${s.status}</td><td class="px-5 py-4 text-xs">${action}</td></tr>`;
+        }).join('') || '<tr><td class="px-5 py-4 text-gray-400" colspan="5">No product submissions.</td></tr>';
+      } catch (err) { tbody.innerHTML = `<tr><td class="px-5 py-4 text-red-600" colspan="5">${err.message}</td></tr>`; }
+    }
+
+    async function reviewProductSubmission(submissionId, approve) {
+      const action = approve ? 'approve' : 'reject';
+      if (!confirm(` ${action.charAt(0).toUpperCase() + action.slice(1)} this product submission?`)) return;
+      try { await apiPost(`/api/admin/product-submissions/${submissionId}/review`, {approve}); await loadProducts(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function submitStockCount(variantId) {
+      const counted = prompt('Enter the physical quantity counted:');
+      if (counted === null) return;
+      try { await apiPost('/api/admin/stock/count', {variant_id: variantId, counted_quantity: Number(counted)}); await loadProducts(); }
+      catch (err) { alert(err.message); }
+    }
+
+    function toggleAddProductForm() {
+      const form = document.getElementById('add-product-form');
+      form.classList.toggle('hidden');
+      if (!form.classList.contains('hidden') && !document.querySelector('.product-entry')) addProductEntry();
+    }
+
+    function addProductEntry() {
+      const container = document.getElementById('product-entry-rows');
+      if (container.children.length >= 50) {
+        setProductBatchMessage('A batch can contain up to 50 products.', 'text-red-600');
+        return;
+      }
+      const entry = document.getElementById('product-entry-template').content.cloneNode(true).querySelector('.product-entry');
+      entry.querySelector('[data-remove-product]').addEventListener('click', () => {
+        entry.remove();
+        if (!container.children.length) addProductEntry();
+        updateProductEntryNumbers();
+      });
+      container.appendChild(entry);
+      updateProductEntryNumbers();
+    }
+
+    function updateProductEntryNumbers() {
+      document.querySelectorAll('.product-entry').forEach((entry, index) => {
+        entry.querySelector('.product-entry-title').textContent = `Product ${index + 1}`;
+        entry.querySelector('[data-remove-product]').classList.toggle('hidden', document.querySelectorAll('.product-entry').length === 1);
+      });
+    }
+
+    function setProductBatchMessage(message, colorClass = 'text-gray-500') {
+      const element = document.getElementById('product-batch-message');
+      element.textContent = message;
+      element.className = `text-sm ${colorClass}`;
+    }
+
+    function clearProductEntries() {
+      document.getElementById('product-entry-rows').replaceChildren();
+      addProductEntry();
+    }
+
+    async function submitAddProduct(e) {
+      e.preventDefault();
+      const rows = [...document.querySelectorAll('.product-entry')];
+      const submitButton = document.getElementById('save-product-batch');
+      const batchId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const products = rows.map(row => {
+        const value = field => row.querySelector(`[data-field="${field}"]`).value.trim();
+        return {
+          name: value('name'), sku: value('sku'), barcode: value('barcode'), category: value('category'), description: value('description'),
+          size: value('size'), age_range: value('age_range'), colour: value('colour'),
+          price: Number(value('price')), stock_qty: Number(value('stock_qty') || 0),
+          photos: [...row.querySelector('[data-product-photos]').files],
+        };
+      });
+      const queueBatch = payloads => {
+        const queue = getPendingProductBatches();
+        queue.push({batch_id: batchId, user_id: currentUser.id, operation: currentUser.role === 'owner' ? 'publish' : 'submit', products: payloads, created_at: new Date().toISOString()});
+        savePendingProductBatches(queue);
+      };
+
+      submitButton.disabled = true;
+      try {
+        if (!navigator.onLine) {
+          if (products.some(product => product.photos.length)) {
+            setProductBatchMessage('Remove photos to save this batch offline. Photos can be added after reconnecting.', 'text-amber-700');
+            return;
+          }
+          queueBatch(products.map(({photos, ...product}) => product));
+          clearProductEntries();
+          setProductBatchMessage(`${products.length} product${products.length === 1 ? '' : 's'} saved on this device. They will sync when you reconnect.`, 'text-amber-700');
+          return;
+        }
+
+        for (const product of products) {
+          if (product.photos.length) {
+            const uploadBody = new FormData();
+            product.photos.forEach(photo => uploadBody.append('photos', photo));
+            const uploadResponse = await fetch('/api/products/upload', {method: 'POST', body: uploadBody});
+            const uploadResult = await uploadResponse.json();
+            if (!uploadResponse.ok) throw new Error(uploadResult.error || 'Photo upload failed.');
+            product.image_urls = uploadResult.urls;
+          }
+          delete product.photos;
+        }
+
+        const productEndpoint = currentUser.role === 'owner' ? '/api/products/batch' : '/api/products/submissions/batch';
+        try {
+          await apiPost(productEndpoint, {batch_id: batchId, products});
+        } catch (err) {
+          if (!(err instanceof TypeError) && navigator.onLine) throw err;
+          queueBatch(products);
+          clearProductEntries();
+          setProductBatchMessage(`${products.length} product${products.length === 1 ? '' : 's'} saved on this device. They will sync when you reconnect.`, 'text-amber-700');
+          return;
+        }
+        clearProductEntries();
+        setProductBatchMessage(currentUser.role === 'owner' ? `${products.length} products published.` : `${products.length} products submitted for approval.`, 'text-green-700');
+        await loadProducts();
+      } catch (err) { setProductBatchMessage(err.message, 'text-red-600'); }
+      finally { submitButton.disabled = false; }
+    }
+
+    function initProductEntries() { addProductEntry(); }
+
+    async function lookupProductCode() {
+      const code = document.getElementById('product-code-lookup').value.trim();
+      if (!code) return;
+      try {
+        const result = await apiGet(`/api/products/lookup?code=${encodeURIComponent(code)}`);
+        addToCart(result.variant.id);
+        document.getElementById('product-code-lookup').value = '';
+      } catch (err) { alert(err.message); }
+    }
+
+    async function scanProductCode() {
+      if (!('BarcodeDetector' in window)) {
+        alert('Camera scanning is not supported in this browser. Enter the barcode or SKU instead.');
+        document.getElementById('product-code-lookup').focus();
+        return;
+      }
+      const detector = new BarcodeDetector();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}});
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        await video.play();
+        const scan = async () => {
+          const codes = await detector.detect(video);
+          if (codes.length) {
+            document.getElementById('product-code-lookup').value = codes[0].rawValue;
+            stream.getTracks().forEach(track => track.stop());
+            await lookupProductCode();
+          } else window.requestAnimationFrame(scan);
+        };
+        scan();
+      } catch (err) { alert('Camera access was unavailable. Enter the barcode or SKU instead.'); }
+    }
+
+    async function loadShift() {
+      const status = document.getElementById('shift-status');
+      if (!status) return null;
+      try {
+        const shift = await apiGet('/api/admin/shifts/current');
+        status.textContent = shift ? `Open since ${new Date(shift.opened_at).toLocaleTimeString()} · Cash sales ${fmt(shift.cash_sales_total)}` : 'No open shift. Open one before a walk-in sale.';
+        status.className = `text-xs mt-1 ${shift ? 'text-green-700' : 'text-amber-700'}`;
+        return shift;
+      } catch (err) { status.textContent = err.message; return null; }
+    }
+
+    async function openShift() {
+      try { await apiPost('/api/admin/shifts/open', {opening_cash: Number(document.getElementById('shift-opening-cash').value || 0)}); await loadShift(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function closeShift() {
+      const shift = await loadShift();
+      if (!shift) return;
+      try { await apiPost(`/api/admin/shifts/${shift.id}/close`, {closing_cash: Number(document.getElementById('shift-closing-cash').value)}); await loadShift(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function loadPos() {
+      const grid = document.getElementById('pos-product-grid');
+      try {
+        productCache = await apiGet('/api/products');
+        grid.innerHTML = productCache.flatMap(p => p.variants.filter(v => v.available_stock > 0).map(v => `
+          <div onclick="addToCart(${v.id})" class="border border-boutique-100 rounded-xl p-4 text-center cursor-pointer hover:border-boutique-400 hover:bg-boutique-50 transition">
+            <p class="text-sm font-medium">${p.name}</p>
+            <p class="text-xs text-gray-500">${[v.size, v.colour].filter(Boolean).join(' / ')} · ${fmt(v.price)}</p>
+          </div>`)).join('');
+      } catch (err) {
+        grid.innerHTML = `<p class="text-red-600 text-sm">${err.message}</p>`;
+      }
+      await loadShift();
+      renderCart();
+    }
+
+    function addToCart(productId) {
+      const product = productCache.find(p => p.variants.some(v => v.id === productId));
+      const variant = product ? product.variants.find(v => v.id === productId) : null;
+      if (!product || !variant) return;
+      const existing = cart.find(c => c.variant.id === productId);
+      if (existing) {
+        if (existing.qty < variant.available_stock) existing.qty += 1;
+      } else {
+        cart.push({product, variant, qty: 1});
+      }
+      renderCart();
+    }
+
+    function renderCart() {
+      const cartEl = document.getElementById('pos-cart');
+      if (cart.length === 0) {
+        cartEl.innerHTML = '<p class="text-gray-400">Cart is empty</p>';
+      } else {
+        cartEl.innerHTML = cart.map(c => `
+          <div class="flex justify-between items-center">
+            <div><p class="font-medium">${c.product.name}</p><p class="text-xs text-gray-400">${c.variant.sku} · Qty: ${c.qty}</p></div>
+            <p>${fmt(c.variant.price * c.qty)}</p>
+          </div>`).join('');
+      }
+      const subtotal = cart.reduce((sum, c) => sum + c.variant.price * c.qty, 0);
+      document.getElementById('pos-subtotal').textContent = fmt(subtotal);
+      document.getElementById('pos-total').textContent = fmt(subtotal);
+    }
+
+    async function completeSale() {
+      const errorEl = document.getElementById('pos-error');
+      const receiptEl = document.getElementById('pos-receipt');
+      errorEl.classList.add('hidden');
+      receiptEl.classList.add('hidden');
+      if (cart.length === 0) return;
+      try {
+        const result = await apiPost('/api/payments/pos-sale', {
+          customer_name: document.getElementById('pos-customer-name').value,
+          customer_phone: document.getElementById('pos-customer-phone').value,
+          customer_email: document.getElementById('pos-customer-email').value,
+          items: cart.map(item => ({variant_id: item.variant.id, quantity: item.qty})),
+        });
+        const receipt = result.receipt;
+        const receiptItems = (receipt.items || []).map(item => `<li><strong>${item.product_name || 'Product'}</strong><div class="text-gray-500">SKU: ${item.sku || '—'} · ${[item.size, item.colour].filter(Boolean).join(' / ') || 'Standard'} · Qty ${item.quantity} · ${fmt(item.unit_price * item.quantity)}</div></li>`).join('');
+        receiptEl.innerHTML = `<h2 class="text-xl font-semibold text-center">BETHEL BOUTIQUE</h2><p class="text-gray-500 text-center mb-4">Where Beauty Meets Elegance</p><div class="flex justify-between font-semibold"><span>Receipt ${receipt.receipt_id}</span><span>${fmt(receipt.amount)}</span></div><p class="text-gray-500 mt-2">Customer: ${receipt.customer_name}</p><p class="text-gray-500">Transaction: ${receipt.transaction_id}</p><p class="text-gray-500">Paid cash · ${new Date(receipt.created_at).toLocaleString()}</p><ul class="list-disc pl-5 mt-4 space-y-2">${receiptItems}</ul><div class="border-t mt-5 pt-4 font-semibold flex justify-between"><span>Total paid</span><span>${fmt(receipt.amount)}</span></div><p class="text-xs text-gray-500 mt-6">E&amp;OE. Goods once sold are not returnable.</p><button onclick="printReceipt()" class="no-print mt-3 text-boutique-700 hover:underline">Print receipt</button>`;
+        receiptEl.classList.remove('hidden');
+        cart = [];
+        document.getElementById('pos-customer-name').value = '';
+        document.getElementById('pos-customer-phone').value = '';
+        document.getElementById('pos-customer-email').value = '';
+        await loadPos();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    function printReceipt() {
+      document.body.classList.add('receipt-printing');
+      window.print();
+      window.setTimeout(() => document.body.classList.remove('receipt-printing'), 1000);
+    }
+
+    async function loadCustomers() {
+      const tbody = document.getElementById('customers-tbody');
+      try {
+        const customers = await apiGet('/api/admin/customers');
+        tbody.innerHTML = customers.map(c => `
+          <tr>
+            <td class="px-6 py-4 font-medium">${c.name}</td>
+            <td class="px-6 py-4">${c.phone || '—'}</td>
+            <td class="px-6 py-4">${c.email || '—'}</td>
+            <td class="px-6 py-4">${fmt(c.total_spent)}</td>
+          </tr>`).join('') || '<tr><td class="px-6 py-4 text-gray-400" colspan="4">No customers yet.</td></tr>';
+      } catch (err) {
+        tbody.innerHTML = `<tr><td class="px-6 py-4 text-red-600" colspan="4">${err.message}</td></tr>`;
+      }
+    }
+
+    function toggleAddCustomerForm() {
+      document.getElementById('add-customer-form').classList.toggle('hidden');
+    }
+
+    async function submitAddCustomer(e) {
+      e.preventDefault();
+      try {
+        await apiPost('/api/admin/customers', {
+          name: document.getElementById('nc-name').value,
+          phone: document.getElementById('nc-phone').value,
+          email: document.getElementById('nc-email').value,
+        });
+        document.getElementById('add-customer-form').reset();
+        toggleAddCustomerForm();
+        await loadCustomers();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function loadOrders() {
+      const tbody = document.getElementById('orders-tbody');
+      try {
+        const orders = await apiGet('/api/admin/orders');
+        tbody.innerHTML = orders.map(o => `
+          <tr>
+            <td class="px-6 py-4 font-medium">#ORD-${o.id}</td>
+            <td class="px-6 py-4"><div>${o.customer}</div><div class="text-xs text-gray-400">${o.sales_channel === 'walk_in' ? 'Walk-in' : 'Online'} · ${o.customer_phone || 'No phone'}${o.customer_email ? ` · ${o.customer_email}` : ''}</div></td>
+            <td class="px-6 py-4">${(o.created_at || '').slice(0,10)}</td>
+            <td class="px-6 py-4 text-xs">${o.items.map(item => `<div><strong>${item.product_name}</strong> · ${item.sku}</div><div class="text-gray-400">${[item.size, item.colour].filter(Boolean).join(' / ') || 'Standard'} · Qty ${item.quantity} · ${fmt(item.unit_price * item.quantity)}</div>`).join('') || 'No item details'}</td>
+            <td class="px-6 py-4">${fmt(o.total)}</td>
+            <td class="px-6 py-4"><span class="px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs">${o.status}</span></td>
+            <td class="px-6 py-4">${nextOrderStatus(o.status) ? `<button onclick="advanceOrder(${o.id}, '${nextOrderStatus(o.status)}')" class="text-xs text-boutique-700 hover:underline">${orderActionLabel(o.status)}</button>` : '<span class="text-xs text-gray-400">Complete</span>'}</td>
+            <td class="px-6 py-4 text-xs">${o.payments.length ? o.payments.map(payment => `<div class="capitalize">${payment.payment_type.replaceAll('_', ' ')}: ${payment.status}</div><div>${payment.payer_phone || o.customer_phone || 'No account number'}</div><div class="text-gray-400">${payment.transaction_id || 'No transaction ID'}</div>${payment.payment_type === 'cash_on_delivery' && payment.status === 'pending' ? `<button onclick="confirmCashOnDelivery(${payment.id})" class="text-boutique-700 hover:underline mt-1">Confirm COD received</button>` : ''}${payment.status === 'success' ? `<button onclick="reversePayment(${payment.id})" class="text-red-600 hover:underline mt-1">Reverse</button>` : ''}`).join('') : '<span class="text-gray-400">Unpaid</span>'}</td>
+          </tr>`).join('') || '<tr><td class="px-6 py-4 text-gray-400" colspan="5">No orders yet.</td></tr>';
+      } catch (err) {
+        tbody.innerHTML = `<tr><td class="px-6 py-4 text-red-600" colspan="4">${err.message}</td></tr>`;
+      }
+    }
+
+    function nextOrderStatus(status) {
+      return {paid: 'processing', processing: 'packed', packed: 'out_for_delivery', out_for_delivery: 'delivered', delivered: 'completed'}[status] || null;
+    }
+
+    function orderActionLabel(status) {
+      return {paid: 'Approve & process', processing: 'Mark packed', packed: 'Dispatch', out_for_delivery: 'Mark delivered', delivered: 'Complete'}[status] || 'Update';
+    }
+
+    async function advanceOrder(orderId, status) {
+      try {
+        await apiPost(`/api/orders/${orderId}/status`, {status});
+        await loadOrders();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function reversePayment(paymentId) {
+      if (!confirm('Reverse this successful payment? Stock will be returned and the order marked payment failed.')) return;
+      try { await apiPost(`/api/payments/${paymentId}/reverse`, {}); await loadOrders(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function confirmCashOnDelivery(paymentId) {
+      if (!confirm('Confirm that the client paid cash on delivery?')) return;
+      try { await apiPost(`/api/payments/${paymentId}/cash-confirm`, {}); await loadOrders(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function loadReports() {
+      const el = document.getElementById('reports-stats');
+      const startDate = document.getElementById('report-start-date');
+      const endDate = document.getElementById('report-end-date');
+      const today = new Date().toISOString().slice(0, 10);
+      if (startDate && !startDate.value) startDate.value = today;
+      if (endDate && !endDate.value) endDate.value = today;
+      const printPeriod = document.getElementById('report-print-period');
+      const periodLabel = startDate.value === endDate.value ? startDate.value : `${startDate.value} to ${endDate.value}`;
+      if (printPeriod) printPeriod.textContent = periodLabel;
+      const screenPeriod = document.getElementById('report-screen-period');
+      if (screenPeriod) screenPeriod.textContent = periodLabel;
+      const printStaff = document.getElementById('report-print-staff');
+      const staffLabel = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Staff';
+      if (printStaff) printStaff.textContent = staffLabel;
+      const screenStaff = document.getElementById('report-screen-staff');
+      if (screenStaff) screenStaff.textContent = staffLabel;
+      try {
+        const s = await apiGet(`/api/admin/reports/daily?start_date=${startDate.value}&end_date=${endDate.value}`);
+        el.innerHTML = `
+          <div><p class="text-2xl font-semibold">${fmt(s.sales_total)}</p><p class="text-xs text-gray-400">Sales</p></div>
+          <div><p class="text-2xl font-semibold">${s.order_count}</p><p class="text-xs text-gray-400">Orders</p></div>
+          <div><p class="text-2xl font-semibold">${fmt(s.cash_total)}</p><p class="text-xs text-gray-400">Cash</p></div>
+          <div><p class="text-2xl font-semibold">${fmt(s.mobile_total)}</p><p class="text-xs text-gray-400">Mobile money</p></div>`;
+        const orderTotals = {};
+        s.product_lines.forEach(item => { orderTotals[item.order_id] = (orderTotals[item.order_id] || 0) + item.line_total; });
+        const productRows = s.product_lines.map(item => `<tr><td class="px-3 py-2">#ORD-${item.order_id}</td><td class="px-3 py-2"><strong>${item.product_name}</strong><div class="text-xs text-gray-400">${item.sku} · ${[item.size, item.colour].filter(Boolean).join(' / ') || 'Standard'}</div></td><td class="px-3 py-2">${item.customer}</td><td class="px-3 py-2">${item.quantity}</td><td class="px-3 py-2">${fmt(item.line_total)}</td></tr>`).join('');
+        const subtotalRows = Object.entries(orderTotals).map(([orderId, total]) => `<tr class="bg-gray-50 font-medium"><td class="px-3 py-2" colspan="4">Subtotal · #ORD-${orderId}</td><td class="px-3 py-2">${fmt(total)}</td></tr>`).join('');
+        const grandTotal = s.product_lines.reduce((sum, item) => sum + item.line_total, 0);
+        document.getElementById('reports-breakdown').innerHTML = `<div class="flex flex-wrap gap-6"><span>Payments: <strong>${s.payment_count}</strong></span><span>Low stock: <strong>${s.low_stock_count}</strong></span><span>Order statuses: <strong>${Object.entries(s.orders_by_status).map(([status, count]) => `${status.replaceAll('_', ' ')} (${count})`).join(', ') || 'None'}</strong></span></div><h4 class="font-medium mt-6 mb-2">Products sold</h4><div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-boutique-50"><tr><th class="px-3 py-2">Order</th><th class="px-3 py-2">Product</th><th class="px-3 py-2">Customer</th><th class="px-3 py-2">Qty</th><th class="px-3 py-2">Value</th></tr></thead><tbody class="divide-y divide-boutique-50">${productRows || '<tr><td class="px-3 py-3 text-gray-400" colspan="5">No products sold on this date.</td></tr>'}</tbody><tfoot class="border-t-2 border-gray-400">${subtotalRows}<tr class="font-bold"><td class="px-3 py-3" colspan="4">Grand total</td><td class="px-3 py-3">${fmt(grandTotal)}</td></tr></tfoot></table></div>`;
+      } catch (err) {
+        el.innerHTML = `<p class="text-red-600 text-sm col-span-4">${err.message}</p>`;
+      }
+    }
+
+    function printReport() {
+      const startDate = document.getElementById('report-start-date');
+      const endDate = document.getElementById('report-end-date');
+      const originalTitle = document.title;
+      document.title = `Bethel Boutique Report ${startDate.value} to ${endDate.value}`;
+      window.print();
+      window.setTimeout(() => { document.title = originalTitle; }, 1000);
+    }
+
+    async function loadStaff() {
+      const tbody = document.getElementById('staff-tbody');
+      try {
+        const staff = await apiGet('/api/admin/staff');
+        tbody.innerHTML = staff.map(u => `
+          <tr>
+            <td class="px-6 py-4 font-medium">${u.name}</td>
+            <td class="px-6 py-4">${u.email}</td>
+            <td class="px-6 py-4"><span class="px-2 py-1 bg-purple-50 text-purple-700 rounded-full text-xs">${u.role}</span></td>
+            <td class="px-6 py-4">${u.active ? 'Active' : 'Inactive'}</td>
+            <td class="px-6 py-4 space-x-2">${u.id === currentUser.id ? '<span class="text-xs text-gray-400">Current account</span>' : `<button onclick="toggleStaff(${u.id}, ${u.active})" class="text-xs text-boutique-700 hover:underline">${u.active ? 'Deactivate' : 'Activate'}</button><button onclick="deleteStaff(${u.id}, '${u.name.replace(/'/g, "\\'")}')" class="text-xs text-red-600 hover:underline">Delete</button>`}</td>
+          </tr>`).join('') || '<tr><td class="px-6 py-4 text-gray-400" colspan="5">No staff yet.</td></tr>';
+      } catch (err) {
+        tbody.innerHTML = `<tr><td class="px-6 py-4 text-red-600" colspan="4">${err.message}</td></tr>`;
+      }
+    }
+
+    async function toggleStaff(userId, currentlyActive) {
+      try {
+        await fetch(`/api/admin/staff/${userId}/status`, {
+          method: 'PATCH', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({active: !currentlyActive}),
+        }).then(async res => { const body = await res.json(); if (!res.ok) throw new Error(body.error || res.statusText); });
+        await loadStaff();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function deleteStaff(userId, name) {
+      if (!confirm(`Delete ${name}? Accounts with business history can only be deactivated.`)) return;
+      try {
+        await fetch(`/api/admin/staff/${userId}`, {method: 'DELETE'}).then(async res => { const body = await res.json(); if (!res.ok) throw new Error(body.error || res.statusText); });
+        await loadStaff();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function submitCreateStaff(e) {
+      e.preventDefault();
+      try {
+        await apiPost('/api/admin/staff', {
+          name: document.getElementById('ns-name').value,
+          email: document.getElementById('ns-email').value,
+          password: document.getElementById('ns-password').value,
+          role: document.getElementById('ns-role').value,
+        });
+        document.querySelector('#staff-create-panel form').reset();
+        await loadStaff();
+        alert('Account created.');
+      } catch (err) { alert(err.message); }
+    }
+
+    {% if oauth_error %}
+    (function() {
+      const errorEl = document.getElementById('login-error');
+      errorEl.textContent = ERROR_MESSAGES['{{ oauth_error }}'] || 'Google sign-in failed. Try again.';
+      errorEl.classList.remove('hidden');
+    })();
+    {% endif %}
+
+    initProductEntries();
+    initializeConnectivity();
+    setLoginTab('staff');
+    loadGuestShop();
+    tryRestoreSession();
+  </script>
+</body>
+</html>

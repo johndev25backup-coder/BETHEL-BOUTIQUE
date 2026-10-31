@@ -1,0 +1,19 @@
+{
+  "name": "Bethel Boutique",
+  "short_name": "Bethel",
+  "description": "Boutique retail management and shopping dashboard for desktop, Android, and iPhone",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf6ff",
+  "theme_color": "#7e32ce",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+-- Secure Database Schema Architecture (Wifarm Agronomics Uganda Limited - 2026)
+
+CREATE TABLE branches (
+    branch_id SERIAL PRIMARY KEY,
+    branch_name VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE employees (
+    employee_id SERIAL PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    company_email VARCHAR(150) UNIQUE NOT NULL CHECK (company_email LIKE '%@wifarm.com'),
+    phone_number VARCHAR(20) NOT NULL,
+    department VARCHAR(50) NOT NULL,
+    hierarchy_role VARCHAR(50) NOT NULL, -- Supervisor, Line Manager, etc.
+    salary_earnings NUMERIC(12, 2) NOT NULL,
+    tenure_start DATE NOT NULL DEFAULT CURRENT_DATE,
+    leave_status VARCHAR(30) DEFAULT 'Active',
+    hobbies TEXT,
+    branch_id INT REFERENCES branches(branch_id),
+    reports_to INT REFERENCES employees(employee_id)
+);
+
+CREATE TABLE clients (
+    client_id SERIAL PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    national_id_nin VARCHAR(50) UNIQUE NOT NULL,
+    nin_photo_path TEXT NOT NULL,
+    facial_photo_path TEXT NOT NULL,
+    primary_contact VARCHAR(20) NOT NULL,
+    secondary_contact VARCHAR(20),
+    monthly_salary NUMERIC(12, 2) NOT NULL,
+    business_summary TEXT NOT NULL,
+    lc1_phone VARCHAR(20) NOT NULL,
+    lc1_stage VARCHAR(100) NOT NULL,
+    next_of_kin_nin VARCHAR(50) NOT NULL,
+    next_of_kin_phone VARCHAR(20) NOT NULL,
+    onboarded_by INT REFERENCES employees(employee_id),
+    backoffice_verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE assets (
+    asset_id SERIAL PRIMARY KEY,
+    client_id INT REFERENCES clients(client_id) ON DELETE RESTRICT,
+    registration_plate VARCHAR(30) UNIQUE NOT NULL,
+    chassis_number VARCHAR(100) UNIQUE NOT NULL,
+    engine_number VARCHAR(100) UNIQUE NOT NULL,
+    whole_body_photo_path TEXT NOT NULL,
+    text_spec_details TEXT,
+    tracker_imei VARCHAR(50) UNIQUE NOT NULL,
+    sim_iccid VARCHAR(30) UNIQUE NOT NULL,
+    client_tin_number VARCHAR(50) NOT NULL, -- Added for ownership transfer tracking
+    ura_invoice_path TEXT UNIQUE,
+    is_asset_verified BOOLEAN DEFAULT FALSE,
+    ownership_transferred BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE loans (
+    loan_id VARCHAR(50) PRIMARY KEY, -- System generated unique lookup alpha-numeric
+    client_id INT REFERENCES clients(client_id),
+    asset_id INT REFERENCES assets(asset_id),
+    principal_amount NUMERIC(12, 2) NOT NULL,
+    interest_rate_pct NUMERIC(5, 2) NOT NULL,
+    total_repayable NUMERIC(12, 2) NOT NULL,
+    remaining_balance NUMERIC(12, 2) NOT NULL,
+    arrears_balance NUMERIC(12, 2) DEFAULT 0.00,
+    down_payment NUMERIC(12, 2) NOT NULL,
+    loan_status VARCHAR(30) DEFAULT 'Active',
+    disbursed_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE payments_ledger (
+    transaction_id VARCHAR(100) PRIMARY KEY, -- Unique Mobile Money / Bank Reference Hash
+    loan_id VARCHAR(50) REFERENCES loans(loan_id),
+    payment_method VARCHAR(30) NOT NULL, -- MTN, AIRTEL, BANK, CASH
+    gross_amount NUMERIC(12, 2) NOT NULL,
+    principal_slice NUMERIC(12, 2) NOT NULL,
+    interest_slice NUMERIC(12, 2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
