@@ -1,4 +1,5 @@
 import os
+import re
 import secrets
 import warnings
 
@@ -14,7 +15,7 @@ def _require(name, local_default=None):
     exactly what is wrong. Locally, fall back to `local_default` (a value or a
     zero-argument callable) so the app still starts for demo/testing.
     """
-    value = os.environ.get(name)
+    value = os.environ.get(name, "").strip().strip("'\"")
     if value:
         return value
     if ON_VERCEL:
@@ -50,9 +51,9 @@ class Config:
     # SQLite is for local testing only. Vercel's filesystem is read-only, and
     # SQLite can't safely handle concurrent writes for the stock-locking logic.
     _db_url = _require("DATABASE_URL", "sqlite:///boutique_demo.db")
-    # SQLAlchemy needs "postgresql://", but some providers hand out "postgres://".
-    if _db_url.startswith("postgres://"):
-           _db_url = _db_url.replace("postgresql+psycopg://", "postgresql://", 1)
+    # Force the psycopg2 driver for any Postgres URL, whatever form the
+    # provider or the env var uses (postgres://, postgresql://, +psycopg).
+    _db_url = re.sub(r"^postgres(ql)?(\+\w+)?://", "postgresql+psycopg2://", _db_url)
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Serverless functions can sit idle and lose DB connections; this checks a
