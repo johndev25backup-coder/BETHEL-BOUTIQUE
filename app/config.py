@@ -2,47 +2,81 @@ import os
 import secrets
 import warnings
 
+# Vercel sets the VERCEL environment variable automatically on every deployment.
+ON_VERCEL = bool(os.environ.get("VERCEL"))
+
+
+def _require(name, local_default=None):
+    """
+    Return the environment variable `name`.
+
+    On Vercel, a missing value raises a clear error so the deployment logs say
+    exactly what is wrong. Locally, fall back to `local_default` (a value or a
+    zero-argument callable) so the app still starts for demo/testing.
+    """
+    value = os.environ.get(name)
+    if value:
+        return value
+    if ON_VERCEL:
+        raise RuntimeError(
+            f"{name} must be set in Vercel -> Project Settings -> Environment Variables"
+        )
+    warnings.warn(
+        f"{name} not set - using a local-only fallback. "
+        f"Set {name} in your .env before production."
+    )
+    return local_default() if callable(local_default) else local_default
+
+
+def _bool(name, default="false"):
+    return os.environ.get(name, default).strip().lower() == "true"
+
 
 class Config:
     """
     All secrets are read from environment variables, never hardcoded.
-    Load a real .env file (see .env.example) before running the app.
+    Locally: load a real .env file (see .env.example) before running the app.
+    On Vercel: set them under Project Settings -> Environment Variables.
     """
 
-    SECRET_KEY = os.environ.get("SECRET_KEY")
-    if not SECRET_KEY:
-        # Auto-generates a throwaway key so the app can start immediately
-        # for local demo/testing. This key changes every restart, which
-        # logs everyone out each time - fine for testing, not for
-        # production. Set a real SECRET_KEY in .env before going live.
-        warnings.warn(
-            "SECRET_KEY not set - using a temporary generated key for this "
-            "run only. Set SECRET_KEY in your .env before production."
-        )
-        SECRET_KEY = secrets.token_hex(32)
+    # --- Core security ---
+    # Random fallbacks are fine locally but NOT on serverless (each instance
+    # would get a different key), so on Vercel these are required.
+    SECRET_KEY = _require("SECRET_KEY", lambda: secrets.token_hex(32))
+    ADMIN_API_KEY = _require("ADMIN_API_KEY", lambda: secrets.token_hex(32))
+    PUBLIC_API_KEY = _require("PUBLIC_API_KEY", lambda: secrets.token_hex(16))
 
-    # Falls back to a local SQLite file if DATABASE_URL isn't set, so the
-    # app can run immediately for local testing with zero database setup.
-    # Switch to a real DATABASE_URL (PostgreSQL) before going anywhere near
-    # production - SQLite doesn't handle concurrent writes safely enough
-    # for the stock-locking logic once real customers are hitting it.
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///boutique_demo.db")
+    # --- Database ---
+    # SQLite is for local testing only. Vercel's filesystem is read-only, and
+    # SQLite can't safely handle concurrent writes for the stock-locking logic.
+    _db_url = _require("DATABASE_URL", "sqlite:///boutique_demo.db")
+    # SQLAlchemy needs "postgresql://", but some providers hand out "postgres://".
+    if _db_url.startswith("postgres://"):
+        _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+    SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Serverless functions can sit idle and lose DB connections; this checks a
+    # connection is alive before using it.
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+
+    # --- Uploads ---
+    # /tmp is the only writable location on Vercel, and it is ephemeral and not
+    # shared between instances. Use object storage (Vercel Blob, S3, Cloudinary)
+    # for product images that must persist.
     UPLOAD_FOLDER = os.path.join("/tmp", "bethel_boutique", "uploads")
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024
 
-    # Demo/testing mode: when true, payment "initiation" instantly succeeds
-    # with a fake reference instead of calling MTN/Airtel/M-Pesa - lets you
-    # test the full checkout -> payment -> points -> tracking flow before
-    # you have real sandbox credentials. MUST be false in production.
-    PAYMENT_MOCK_MODE = os.environ.get("PAYMENT_MOCK_MODE", "true").lower() == "true"
+    # --- Sessions / cookies ---
+    # Vercel serves over HTTPS, so default to secure cookies there.
+    SESSION_COOKIE_SECURE = _bool("SESSION_COOKIE_SECURE", "true" if ON_VERCEL else "false")
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
 
-    # --- Admin console key: server-side only, see .env.example for rules ---
-    # Same demo-convenience pattern as SECRET_KEY above: auto-generated if
-    # missing so the app starts, but a real fixed value belongs in .env
-    # before this is exposed to the internet.
-    ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY") or secrets.token_hex(32)
-    PUBLIC_API_KEY = os.environ.get("PUBLIC_API_KEY") or secrets.token_hex(16)
+    # --- Payments: demo/testing mode ---
+    # When true, payment "initiation" instantly succeeds with a fake reference
+    # instead of calling MTN/Airtel/M-Pesa. Defaults to FALSE so it can never be
+    # on by accident; set PAYMENT_MOCK_MODE=true explicitly for testing.
+    PAYMENT_MOCK_MODE = _bool("PAYMENT_MOCK_MODE", "false")
 
     # --- Google OAuth ---
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
@@ -66,13 +100,18 @@ class Config:
     MPESA_CONSUMER_SECRET = os.environ.get("MPESA_CONSUMER_SECRET")
     MPESA_SHORTCODE = os.environ.get("MPESA_SHORTCODE")
     MPESA_PASSKEY = os.environ.get("MPESA_PASSKEY")
+    # Must be a public HTTPS URL on your deployed domain, not localhost.
     MPESA_CALLBACK_URL = os.environ.get("MPESA_CALLBACK_URL")
 
-    # Business rules (owner-configurable defaults; move to a settings table
-    # later if you want the owner to edit these from the dashboard)
+    # --- Cron (stock reservation cleanup) ---
+    # Serverless functions can't run background timers, so expired reservations
+    # are released by a Vercel Cron Job calling a protected endpoint.
+    # Vercel sends "Authorization: Bearer <CRON_SECRET>" if CRON_SECRET is set.
+    CRON_SECRET = os.environ.get("CRON_SECRET")
+
+    # --- Business rules (owner-configurable defaults) ---
+    # Move to a settings table later if the owner should edit these from the dashboard.
     LOYALTY_MIN_PURCHASE_UGX = 20000
     LOYALTY_MIN_POINTS_AWARDED = 4000
     STOCK_RESERVATION_MINUTES = 45
     RETURN_WINDOW_DAYS = 2
-    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
-    
