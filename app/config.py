@@ -52,7 +52,7 @@ class Config:
     _db_url = _require("DATABASE_URL", "sqlite:///boutique_demo.db")
     # SQLAlchemy needs "postgresql://", but some providers hand out "postgres://".
     if _db_url.startswith("postgres://"):
-        _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+           _db_url = _db_url.replace("postgresql+psycopg://", "postgresql://", 1)
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Serverless functions can sit idle and lose DB connections; this checks a
