@@ -187,8 +187,11 @@ def staff_login():
 @auth_bp.route("/bootstrap-owner", methods=["POST"])
 @limiter.limit("5 per minute")
 def bootstrap_owner():
-    setup_key = os.environ.get("SETUP_KEY", "")
-    supplied = request.headers.get("X-Setup-Key", "")
+    setup_key = os.environ.get("SETUP_KEY", "").strip()
+    supplied = request.headers.get("X-Setup-Key", "").strip()
+    # Diagnostic only: shows whether a key is configured and how long each key is,
+    # never the key itself. Remove this line together with the whole function.
+    print("setup-key check: configured =", bool(setup_key), "| stored length =", len(setup_key), "| sent length =", len(supplied))
     if not setup_key or not hmac.compare_digest(setup_key.encode("utf-8"), supplied.encode("utf-8")):
         return jsonify({"error": "not found"}), 404
 
