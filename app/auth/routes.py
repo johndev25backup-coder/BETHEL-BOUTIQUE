@@ -178,6 +178,96 @@ def staff_login():
     return jsonify({"message": "logged in", "user_id": user.id, "role": user.role.value}), 200
 
 
+# ---------------------------------------------------------------------------
+# TEMPORARY: first-owner setup. DELETE this whole function (and the SETUP_KEY
+# environment variable in Vercel) as soon as your owner account exists.
+# It only works with the secret X-Setup-Key header, only while no owner
+# exists, and it creates any missing database tables first.
+# ---------------------------------------------------------------------------
+@auth_bp.route("/bootstrap-owner", methods=["POST"])
+@limiter.limit("5 per minute")
+def bootstrap_owner():
+    setup_key = os.environ.get("SETUP_KEY", "")
+    supplied = request.headers.get("X-Setup-Key", "")
+    if not setup_key or not hmac.compare_digest(setup_key.encode("utf-8"), supplied.encode("utf-8")):
+        return jsonify({"error": "not found"}), 404
+
+    db.create_all()
+
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    phone = (data.get("phone") or "").strip() or None
+    password = data.get("password") or ""
+    if not email or len(password) < 10:
+        return jsonify({"error": "email and a password of at least 10 characters are required"}), 400
+
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+        if existing.role != UserRole.OWNER:
+            return jsonify({"error": "that email belongs to a non-owner account"}), 409
+        # Owner already exists with this email: reset the password.
+        existing.password_hash = _hash_password(password)
+        db.session.commit()
+        return jsonify({"message": "owner password reset", "email": email}), 200
+
+    if User.query.filter_by(role=UserRole.OWNER).first():
+        return jsonify({"error": "an owner already exists with a different email"}), 409
+    if not name:
+        return jsonify({"error": "name is required to create the owner"}), 400
+
+    user = User(name=name, email=email, phone=phone, role=UserRole.OWNER)
+    user.password_hash = _hash_password(password)
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({"message": "owner created", "email": email}), 201
+
+
+# --- Google sign-in for AUTHORISED STAFF ONLY --------------------------------
+# No account is ever created here. A Google account can only log in if an owner
+# has already created a STAFF/OWNER user with that exact (verified) email.
+@auth_bp.route("/google-config", methods=["GET"])
+def google_config():
+    # The client ID is public by design; the page needs it to show the button.
+    return jsonify({"client_id": current_app.config.get("GOOGLE_CLIENT_ID") or ""}), 200
+
+
+@auth_bp.route("/staff-google", methods=["POST"])
+@limiter.limit("10 per minute")
+def staff_google_login():
+    data = request.get_json(silent=True) or {}
+    credential = data.get("credential") or ""
+    client_id = current_app.config.get("GOOGLE_CLIENT_ID")
+    if not credential or not client_id:
+        return jsonify({"error": "Google sign-in is not configured"}), 400
+
+    try:
+        from google.oauth2 import id_token as google_id_token
+        from google.auth.transport import requests as google_requests
+
+        # Verifies signature, expiry and that the token was issued for OUR client ID.
+        payload = google_id_token.verify_oauth2_token(
+            credential, google_requests.Request(), client_id
+        )
+    except Exception:
+        log_audit_event(action="staff_google_failed", details={"reason": "token_rejected"})
+        return jsonify({"error": "invalid credentials"}), 401
+
+    email = (payload.get("email") or "").strip().lower()
+    if not email or not payload.get("email_verified"):
+        log_audit_event(action="staff_google_failed", details={"reason": "email_unverified"})
+        return jsonify({"error": "invalid credentials"}), 401
+
+    user = User.query.filter_by(email=email).first()
+    if not user or user.role not in (UserRole.STAFF, UserRole.OWNER):
+        log_audit_event(action="staff_google_failed", details={"email": email, "reason": "not_authorised"})
+        return jsonify({"error": "this Google account is not authorised for staff access"}), 403
+
+    login_user(user)
+    log_audit_event(action="login_success", entity_type="user", entity_id=user.id, details={"via": "staff_google"})
+    return jsonify({"message": "logged in", "user_id": user.id, "role": user.role.value}), 200
+
+
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
