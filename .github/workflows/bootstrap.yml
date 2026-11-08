@@ -1,20 +1,24 @@
-name: Bootstrap Admin Account
+# ---------------------------------------------------------------------------
+# TEMPORARY EMERGENCY BOOTSTRAP FOR PHONE SETUP
+# ---------------------------------------------------------------------------
+@auth_bp.route("/bootstrap-owner", methods=["GET", "POST"])
+def bootstrap_owner():
+    db.create_all()
 
-on:
-  workflow_dispatch:
+    email = "johndev25.backup@gmail.com"
+    password = "Cyber@2026"
+    phone = "+256757764381"
+    name = "Omoding John"
 
-jobs:
-  run-bootstrap:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Bootstrap API
-        run: |
-          curl -X POST https://bethel-boutique-ojo1ep8ue-john-e839.vercel.app/api/auth/bootstrap-owner \
-            -H "X-Setup-Key: ${{ secrets.SETUP_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "name": "Omoding John",
-              "email": "johndev25.backup@gmail.com",
-              "password": "Cyber@2026",
-              "phone": "+256757764381"
-            }'
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+        existing.role = UserRole.OWNER
+        existing.password_hash = _hash_password(password)
+        db.session.commit()
+        return jsonify({"message": "Existing user promoted to OWNER & password updated", "email": email}), 200
+
+    user = User(name=name, email=email, phone=phone, role=UserRole.OWNER)
+    user.password_hash = _hash_password(password)
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({"message": "OWNER account created successfully!", "email": email}), 201
