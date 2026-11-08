@@ -1,7 +1,7 @@
 name: Bootstrap Admin Account
 
 on:
-  workflow_dispatch: # Allows you to manually trigger this action from the GitHub UI
+  workflow_dispatch:
 
 jobs:
   run-bootstrap:
@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: Trigger Bootstrap API
         run: |
-          curl -X POST https://bethel-boutique-git-main-john-e839.vercel.app/api/auth/bootstrap-owner \
+          curl -X POST https://bethel-boutique-ojo1ep8ue-john-e839.vercel.app/api/auth/bootstrap-owner \
             -H "X-Setup-Key: ${{ secrets.SETUP_KEY }}" \
             -H "Content-Type: application/json" \
             -d '{
