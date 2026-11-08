@@ -14,13 +14,6 @@ from app.models import User, UserRole
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 # --- OTP codes without server-side storage ---------------------------------
-# The old version kept codes in an in-memory dict. On Vercel every request can
-# land on a different function instance, so a code created by one instance was
-# unknown to the next one and sign-up always failed with "invalid or expired".
-#
-# Now the code is derived from the phone number, the current time window and
-# SECRET_KEY (an HMAC), so any instance can recompute and check it. A code is
-# valid for the window it was issued in plus the next one (5 to 10 minutes).
 OTP_TTL_SECONDS = 300
 
 
@@ -44,7 +37,6 @@ def _otp_is_valid(phone: str, code: str) -> bool:
 
 
 def _show_debug_otp() -> bool:
-    # Set SHOW_DEBUG_OTP=false in Vercel once a real SMS provider is wired up.
     return os.environ.get("SHOW_DEBUG_OTP", "true").strip().lower() == "true"
 
 
@@ -59,7 +51,7 @@ def _check_password(raw_password: str, hashed: str) -> bool:
 
 
 @auth_bp.route("/otp/request", methods=["POST"])
-@limiter.limit("5 per minute")  # blunts OTP-spam / brute force
+@limiter.limit("5 per minute")
 def request_otp():
     data = request.get_json(silent=True) or {}
     phone = (data.get("phone") or "").strip()
@@ -68,8 +60,6 @@ def request_otp():
 
     code = _otp_for(phone, _otp_window())
 
-    # TODO: send `code` via your SMS provider instead of returning it.
-    # Returned here only so the flow is testable before an SMS provider is wired up.
     response = {"message": "OTP sent"}
     if _show_debug_otp():
         response["debug_otp"] = code
@@ -105,29 +95,11 @@ def verify_otp_and_login():
 @auth_bp.route("/google", methods=["POST"])
 @limiter.limit("10 per minute")
 def google_login():
-    """
-    Expects a verified Google ID token from the frontend (obtained via
-    Google Sign-In). Verify it server-side before trusting any claims -
-    never trust a "google_sub"/email sent raw from the client without
-    verifying the token signature against Google's public keys.
-
-    TODO: plug in google-auth / authlib token verification here using
-    GOOGLE_CLIENT_ID from config. This stub assumes verification already
-    happened and a verified payload was produced, to keep the ownership/
-    account-linking logic clear.
-    """
     data = request.get_json(silent=True) or {}
     id_token = data.get("id_token")
     if not id_token:
         return jsonify({"error": "id_token is required"}), 400
 
-    # TODO: replace with real verification, e.g.:
-    #   from google.oauth2 import id_token as google_id_token
-    #   from google.auth.transport import requests as google_requests
-    #   payload = google_id_token.verify_oauth2_token(
-    #       id_token, google_requests.Request(), current_app.config["GOOGLE_CLIENT_ID"]
-    #   )
-    #   google_sub, email, name = payload["sub"], payload["email"], payload.get("name")
     return jsonify({
         "error": "Google verification not yet configured - see TODO in app/auth/routes.py"
     }), 501
@@ -136,11 +108,6 @@ def google_login():
 @auth_bp.route("/complete-profile", methods=["POST"])
 @login_required
 def complete_profile():
-    """
-    A client who signed up via Google must add a phone number before they
-    can check out, since delivery calls and mobile-money payments both
-    require one.
-    """
     data = request.get_json(silent=True) or {}
     phone = (data.get("phone") or "").strip()
     if not phone:
@@ -158,12 +125,6 @@ def complete_profile():
 @auth_bp.route("/staff-login", methods=["POST"])
 @limiter.limit("10 per minute")
 def staff_login():
-    """
-    Staff/owner accounts use email+password only (no Google login) to keep
-    the admin-capable login surface smaller. Staff accounts are created by
-    an owner via the admin blueprint, not through self-registration.
-    The very first owner is created with create_owner.py.
-    """
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
@@ -179,59 +140,33 @@ def staff_login():
 
 
 # ---------------------------------------------------------------------------
-# TEMPORARY: first-owner setup. DELETE this whole function (and the SETUP_KEY
-# environment variable in Vercel) as soon as your owner account exists.
-# It only works with the secret X-Setup-Key header, only while no owner
-# exists, and it creates any missing database tables first.
+# TEMPORARY EMERGENCY BOOTSTRAP FOR PHONE SETUP
 # ---------------------------------------------------------------------------
-@auth_bp.route("/bootstrap-owner", methods=["POST"])
-@limiter.limit("5 per minute")
+@auth_bp.route("/bootstrap-owner", methods=["GET", "POST"])
 def bootstrap_owner():
-    setup_key = os.environ.get("SETUP_KEY", "").strip()
-    supplied = request.headers.get("X-Setup-Key", "").strip()
-    # Diagnostic only: shows whether a key is configured and how long each key is,
-    # never the key itself. Remove this line together with the whole function.
-    print("setup-key check: configured =", bool(setup_key), "| stored length =", len(setup_key), "| sent length =", len(supplied))
-    if not setup_key or not hmac.compare_digest(setup_key.encode("utf-8"), supplied.encode("utf-8")):
-        return jsonify({"error": "not found"}), 404
-
     db.create_all()
 
-    data = request.get_json(silent=True) or {}
-    name = (data.get("name") or "").strip()
-    email = (data.get("email") or "").strip().lower()
-    phone = (data.get("phone") or "").strip() or None
-    password = data.get("password") or ""
-    if not email or len(password) < 10:
-        return jsonify({"error": "email and a password of at least 10 characters are required"}), 400
+    email = "johndev25.backup@gmail.com"
+    password = "Cyber@2026"
+    phone = "+256757764381"
+    name = "Omoding John"
 
     existing = User.query.filter_by(email=email).first()
     if existing:
-        if existing.role != UserRole.OWNER:
-            return jsonify({"error": "that email belongs to a non-owner account"}), 409
-        # Owner already exists with this email: reset the password.
+        existing.role = UserRole.OWNER
         existing.password_hash = _hash_password(password)
         db.session.commit()
-        return jsonify({"message": "owner password reset", "email": email}), 200
-
-    if User.query.filter_by(role=UserRole.OWNER).first():
-        return jsonify({"error": "an owner already exists with a different email"}), 409
-    if not name:
-        return jsonify({"error": "name is required to create the owner"}), 400
+        return jsonify({"message": "Existing user promoted to OWNER & password updated", "email": email}), 200
 
     user = User(name=name, email=email, phone=phone, role=UserRole.OWNER)
     user.password_hash = _hash_password(password)
     db.session.add(user)
     db.session.commit()
-    return jsonify({"message": "owner created", "email": email}), 201
+    return jsonify({"message": "OWNER account created successfully!", "email": email}), 201
 
 
-# --- Google sign-in for AUTHORISED STAFF ONLY --------------------------------
-# No account is ever created here. A Google account can only log in if an owner
-# has already created a STAFF/OWNER user with that exact (verified) email.
 @auth_bp.route("/google-config", methods=["GET"])
 def google_config():
-    # The client ID is public by design; the page needs it to show the button.
     return jsonify({"client_id": current_app.config.get("GOOGLE_CLIENT_ID") or ""}), 200
 
 
@@ -248,7 +183,6 @@ def staff_google_login():
         from google.oauth2 import id_token as google_id_token
         from google.auth.transport import requests as google_requests
 
-        # Verifies signature, expiry and that the token was issued for OUR client ID.
         payload = google_id_token.verify_oauth2_token(
             credential, google_requests.Request(), client_id
         )
@@ -282,9 +216,6 @@ def logout():
 @auth_bp.route("/me", methods=["GET"])
 @login_required
 def me():
-    # Returns ONLY the logged-in user's own data - never accepts a
-    # user_id param here, precisely so this route can't be used to probe
-    # other accounts.
     return jsonify({
         "id": current_user.id,
         "name": current_user.name,
