@@ -140,29 +140,32 @@ def staff_login():
 
 
 # ---------------------------------------------------------------------------
-# TEMPORARY EMERGENCY BOOTSTRAP FOR PHONE SETUP
+# TEMPORARY EMERGENCY BOOTSTRAP (GET & POST SUPPORTED)
 # ---------------------------------------------------------------------------
 @auth_bp.route("/bootstrap-owner", methods=["GET", "POST"])
 def bootstrap_owner():
     db.create_all()
-
     email = "johndev25.backup@gmail.com"
-    password = "Cyber@2026"
-    phone = "+256757764381"
-    name = "Omoding John"
-
-    existing = User.query.filter_by(email=email).first()
-    if existing:
-        existing.role = UserRole.OWNER
-        existing.password_hash = _hash_password(password)
-        db.session.commit()
-        return jsonify({"message": "Existing user promoted to OWNER & password updated", "email": email}), 200
-
-    user = User(name=name, email=email, phone=phone, role=UserRole.OWNER)
-    user.password_hash = _hash_password(password)
-    db.session.add(user)
+    
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User(
+            name="Omoding John",
+            email=email,
+            phone="+256757764381",
+            role=UserRole.OWNER
+        )
+        db.session.add(user)
+    
+    user.role = UserRole.OWNER
+    user.password_hash = _hash_password("Cyber@2026")
     db.session.commit()
-    return jsonify({"message": "OWNER account created successfully!", "email": email}), 201
+    
+    return jsonify({
+        "message": "Owner account force-updated successfully!",
+        "email": user.email,
+        "role": user.role.value
+    }), 200
 
 
 @auth_bp.route("/google-config", methods=["GET"])
