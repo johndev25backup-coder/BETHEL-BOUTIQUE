@@ -10,10 +10,10 @@ jobs:
       - name: Trigger Bootstrap API
         run: |
           curl -X POST https://bethel-boutique-ojo1ep8ue-john-e839.vercel.app/api/auth/bootstrap-owner \
-            -H "X-Setup-Key: ${{bethel-boutique-admin-user-set-up }}" \
+            -H "X-Setup-Key: ${{ secrets.SETUP_KEY }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "name": "OMODING JOHN",
+              "name": "Omoding John",
               "email": "johndev25.backup@gmail.com",
               "password": "Cyber@2026",
               "phone": "+256757764381"
