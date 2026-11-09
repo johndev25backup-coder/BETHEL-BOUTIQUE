@@ -20,24 +20,24 @@ def _otp_window(offset=0):
     return int(time.time() // OTP_TTL_SECONDS) - offset
 
 
-def _otp_for(phone: str, window: int) -> str:
+def _otp_for(target: str, window: int) -> str:
     secret = current_app.config.get("SECRET_KEY") or "default-secret-key"
     key = secret.encode("utf-8")
-    digest = hmac.new(key, f"{phone}:{window}".encode("utf-8"), hashlib.sha256).digest()
+    digest = hmac.new(key, f"{target}:{window}".encode("utf-8"), hashlib.sha256).digest()
     return f"{int.from_bytes(digest[:4], 'big') % 1_000_000:06d}"
 
 
-def _otp_is_valid(phone: str, code: str) -> bool:
-    if not phone or not code:
+def _otp_is_valid(target: str, code: str) -> bool:
+    if not target or not code:
         return False
     return any(
-        hmac.compare_digest(_otp_for(phone, _otp_window(offset)), code)
+        hmac.compare_digest(_otp_for(target, _otp_window(offset)), code)
         for offset in (0, 1)
     )
 
 
 def _show_debug_otp() -> bool:
-    return os.environ.get("SHOW_DEBUG_OTP", "true").strip().lower() == "true"
+    return os.environ.get("SHOW_DEBUG_OTP", "false").strip().lower() == "true"
 
 
 def _hash_password(raw_password: str) -> str:
@@ -50,16 +50,17 @@ def _check_password(raw_password: str, hashed: str) -> bool:
     return bcrypt.checkpw(raw_password.encode("utf-8"), hashed.encode("utf-8"))
 
 
+# --- CUSTOMER OTP AUTHENTICATION (PHONE OR EMAIL) ---
 @auth_bp.route("/otp/request", methods=["POST"])
 @limiter.limit("5 per minute")
 def request_otp():
     data = request.get_json(silent=True) or {}
-    phone = (data.get("phone") or "").strip()
-    if not phone:
-        return jsonify({"error": "phone is required"}), 400
+    identifier = (data.get("phone") or data.get("email") or "").strip().lower()
+    if not identifier:
+        return jsonify({"error": "Phone number or email is required"}), 400
 
-    code = _otp_for(phone, _otp_window())
-    response = {"message": "OTP sent"}
+    code = _otp_for(identifier, _otp_window())
+    response = {"message": "OTP sent successfully"}
     if _show_debug_otp():
         response["debug_otp"] = code
     return jsonify(response), 200
@@ -69,55 +70,47 @@ def request_otp():
 @limiter.limit("10 per minute")
 def verify_otp_and_login():
     data = request.get_json(silent=True) or {}
-    phone = (data.get("phone") or "").strip()
+    identifier = (data.get("phone") or data.get("email") or "").strip().lower()
     code = (data.get("code") or "").strip()
     name = (data.get("name") or "").strip()
 
-    if not _otp_is_valid(phone, code):
-        log_audit_event(action="otp_verify_failed", details={"phone": phone})
-        return jsonify({"error": "invalid or expired code"}), 401
+    if not identifier or not code:
+        return jsonify({"error": "Identifier and OTP code are required"}), 400
 
-    user = User.query.filter_by(phone=phone).first()
+    if not _otp_is_valid(identifier, code):
+        log_audit_event(action="otp_verify_failed", details={"identifier": identifier})
+        return jsonify({"error": "Invalid or expired OTP code"}), 401
+
+    # Check if identifier is phone or email
+    is_email = "@" in identifier
+    filter_kwargs = {"email": identifier} if is_email else {"phone": identifier}
+    
+    user = User.query.filter_by(**filter_kwargs).first()
     if user is None:
         if not name:
-            return jsonify({"error": "name is required for new accounts"}), 400
-        user = User(name=name, phone=phone, role=UserRole.CLIENT)
+            return jsonify({"error": "Name is required for new customer registrations"}), 400
+        
+        # New customers are strictly registered as CLIENT role
+        user = User(
+            name=name,
+            email=identifier if is_email else None,
+            phone=identifier if not is_email else None,
+            role=UserRole.CLIENT
+        )
         db.session.add(user)
         db.session.commit()
-        log_audit_event(action="user_registered", entity_type="user", entity_id=user.id, details={"via": "phone_otp"})
+        log_audit_event(action="user_registered", entity_type="user", entity_id=user.id, details={"via": "otp"})
+
+    # Security safeguard: Prevent staff/owner roles from logging in via public OTP endpoints
+    if user.role in (UserRole.STAFF, UserRole.OWNER):
+        return jsonify({"error": "Staff and owners must use secure password or approved Google login"}), 403
 
     login_user(user)
-    log_audit_event(action="login_success", entity_type="user", entity_id=user.id, details={"via": "phone_otp"})
-    return jsonify({"message": "logged in", "user_id": user.id, "role": user.role.value}), 200
+    log_audit_event(action="login_success", entity_type="user", entity_id=user.id, details={"via": "otp"})
+    return jsonify({"message": "Logged in successfully", "user_id": user.id, "role": user.role.value}), 200
 
 
-@auth_bp.route("/google", methods=["POST"])
-@limiter.limit("10 per minute")
-def google_login():
-    data = request.get_json(silent=True) or {}
-    id_token = data.get("id_token")
-    if not id_token:
-        return jsonify({"error": "id_token is required"}), 400
-    return jsonify({"error": "Google verification not yet configured"}), 501
-
-
-@auth_bp.route("/complete-profile", methods=["POST"])
-@login_required
-def complete_profile():
-    data = request.get_json(silent=True) or {}
-    phone = (data.get("phone") or "").strip()
-    if not phone:
-        return jsonify({"error": "phone is required"}), 400
-
-    existing = User.query.filter_by(phone=phone).first()
-    if existing and existing.id != current_user.id:
-        return jsonify({"error": "phone already in use"}), 409
-
-    current_user.phone = phone
-    db.session.commit()
-    return jsonify({"message": "profile updated"}), 200
-
-
+# --- STAFF & OWNER PASSWORD LOGIN ---
 @auth_bp.route("/staff-login", methods=["POST"])
 @limiter.limit("10 per minute")
 def staff_login():
@@ -126,43 +119,16 @@ def staff_login():
     password = data.get("password") or ""
 
     user = User.query.filter_by(email=email).first()
-    if not user:
-        return jsonify({"error": "User not found with that email"}), 401
-    
-    if user.role not in (UserRole.STAFF, UserRole.OWNER):
-        return jsonify({"error": f"Account role is '{user.role.value}', not staff/owner"}), 401
-        
-    if not _check_password(password, user.password_hash):
-        return jsonify({"error": "Password hash mismatch"}), 401
+    if not user or user.role not in (UserRole.STAFF, UserRole.OWNER) or not _check_password(password, user.password_hash):
+        log_audit_event(action="staff_login_failed", details={"email": email})
+        return jsonify({"error": "Invalid credentials or unauthorized access"}), 401
 
     login_user(user)
     log_audit_event(action="login_success", entity_type="user", entity_id=user.id, details={"via": "staff_password"})
-    return jsonify({"message": "logged in", "user_id": user.id, "role": user.role.value}), 200
+    return jsonify({"message": "Logged in successfully", "user_id": user.id, "role": user.role.value}), 200
 
 
-@auth_bp.route("/bootstrap-owner", methods=["GET", "POST"])
-def bootstrap_owner():
-    try:
-        db.create_all()
-        email = "johndev25.backup@gmail.com"
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            user = User(name="Omoding John", email=email, phone="+256757764381", role=UserRole.OWNER)
-            db.session.add(user)
-        user.role = UserRole.OWNER
-        user.password_hash = _hash_password("Cyber@2026")
-        db.session.commit()
-        return jsonify({"message": "Owner account force-updated successfully!", "email": user.email, "role": user.role.value}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": "Database error", "details": str(e)}), 500
-
-
-@auth_bp.route("/google-config", methods=["GET"])
-def google_config():
-    return jsonify({"client_id": current_app.config.get("GOOGLE_CLIENT_ID") or ""}), 200
-
-
+# --- PRE-APPROVED STAFF & OWNER GOOGLE LOGIN ---
 @auth_bp.route("/staff-google", methods=["POST"])
 @limiter.limit("10 per minute")
 def staff_google_login():
@@ -181,25 +147,52 @@ def staff_google_login():
         )
     except Exception:
         log_audit_event(action="staff_google_failed", details={"reason": "token_rejected"})
-        return jsonify({"error": "invalid credentials"}), 401
+        return jsonify({"error": "Invalid Google credential token"}), 401
 
     email = (payload.get("email") or "").strip().lower()
     if not email or not payload.get("email_verified"):
-        return jsonify({"error": "invalid credentials"}), 401
+        log_audit_event(action="staff_google_failed", details={"reason": "email_unverified"})
+        return jsonify({"error": "Google account email is unverified"}), 401
 
+    # STRICT CHECK: Account must already exist and be pre-approved with STAFF or OWNER role
     user = User.query.filter_by(email=email).first()
     if not user or user.role not in (UserRole.STAFF, UserRole.OWNER):
-        return jsonify({"error": "this Google account is not authorised for staff access"}), 403
+        log_audit_event(action="staff_google_failed", details={"email": email, "reason": "not_preapproved"})
+        return jsonify({"error": "This Google account has not been pre-approved for staff access"}), 403
 
     login_user(user)
-    return jsonify({"message": "logged in", "user_id": user.id, "role": user.role.value}), 200
+    log_audit_event(action="login_success", entity_type="user", entity_id=user.id, details={"via": "staff_google"})
+    return jsonify({"message": "Logged in successfully", "user_id": user.id, "role": user.role.value}), 200
+
+
+@auth_bp.route("/google-config", methods=["GET"])
+def google_config():
+    return jsonify({"client_id": current_app.config.get("GOOGLE_CLIENT_ID") or ""}), 200
+
+
+@auth_bp.route("/complete-profile", methods=["POST"])
+@login_required
+def complete_profile():
+    data = request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip()
+    if not phone:
+        return jsonify({"error": "Phone number is required"}), 400
+
+    existing = User.query.filter_by(phone=phone).first()
+    if existing and existing.id != current_user.id:
+        return jsonify({"error": "Phone number already in use"}), 409
+
+    current_user.phone = phone
+    db.session.commit()
+    return jsonify({"message": "Profile updated successfully"}), 200
 
 
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    log_audit_event(action="logout", entity_type="user", entity_id=current_user.id)
     logout_user()
-    return jsonify({"message": "logged out"}), 200
+    return jsonify({"message": "Logged out successfully"}), 200
 
 
 @auth_bp.route("/me", methods=["GET"])
