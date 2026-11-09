@@ -126,9 +126,14 @@ def staff_login():
     password = data.get("password") or ""
 
     user = User.query.filter_by(email=email).first()
-    if not user or user.role not in (UserRole.STAFF, UserRole.OWNER) or not _check_password(password, user.password_hash):
-        log_audit_event(action="staff_login_failed", details={"email": email})
-        return jsonify({"error": "invalid credentials"}), 401
+    if not user:
+        return jsonify({"error": "User not found with that email"}), 401
+    
+    if user.role not in (UserRole.STAFF, UserRole.OWNER):
+        return jsonify({"error": f"Account role is '{user.role.value}', not staff/owner"}), 401
+        
+    if not _check_password(password, user.password_hash):
+        return jsonify({"error": "Password hash mismatch"}), 401
 
     login_user(user)
     log_audit_event(action="login_success", entity_type="user", entity_id=user.id, details={"via": "staff_password"})
