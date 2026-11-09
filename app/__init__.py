@@ -1,30 +1,8 @@
-import os
-from flask import Flask
-from app.config import Config
-
-def create_app(config_class=Config):
-    app = Flask(__name__)
-    app.config.from_object(config_class)
-
-    # Ensure upload folder exists, with fallback for Vercel's read-only file system
-    upload_folder = app.config.get("UPLOAD_FOLDER", "/tmp/uploads")
-    try:
-        os.makedirs(upload_folder, exist_ok=True)
-    except OSError:
-        # Automatically fallback to /tmp if the file system is read-only
-        app.config["UPLOAD_FOLDER"] = "/tmp/uploads"
-        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-
-    # --- Initialize Extensions (Uncomment/add yours as needed) ---
-    # login_manager.init_app(app)
-
-    # --- Register Blueprints ---
+# Register your blueprints
     from app.admin.routes import admin_bp
+    from app.auth.routes import auth_bp
+    from app.main.routes import main_bp  # Or your primary UI blueprint
+    
     app.register_blueprint(admin_bp)
-
-    # --- Root Route (Prevents 404 on the base URL) ---
-    @app.route("/")
-    def index():
-        return "Flask App with Google Sheets is online and running successfully!"
-
-    return app
+    app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(main_bp)
