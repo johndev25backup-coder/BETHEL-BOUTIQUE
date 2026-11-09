@@ -6,7 +6,7 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Upload directory handling for Vercel read-only filesystem
+    # Ensure upload directory exists for serverless runtime
     upload_folder = app.config.get("UPLOAD_FOLDER", "/tmp/uploads")
     try:
         os.makedirs(upload_folder, exist_ok=True)
@@ -14,13 +14,7 @@ def create_app(config_class=Config):
         app.config["UPLOAD_FOLDER"] = "/tmp/uploads"
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
-    # --- Register Blueprints ---
-    try:
-        from app.admin.routes import admin_bp
-        app.register_blueprint(admin_bp, url_prefix="/api/admin")
-    except ImportError:
-        pass
-
+    # --- Register Blueprints with /api prefixes ---
     try:
         from app.auth.routes import auth_bp
         app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -28,12 +22,12 @@ def create_app(config_class=Config):
         pass
 
     try:
-        from app.main.routes import main_bp
-        app.register_blueprint(main_bp, url_prefix="/api/main")
+        from app.admin.routes import admin_bp
+        app.register_blueprint(admin_bp, url_prefix="/api/admin")
     except ImportError:
         pass
 
-    # --- Root HTML Route ---
+    # --- Root View Route ---
     @app.route("/")
     def index():
         return render_template("index.html")
