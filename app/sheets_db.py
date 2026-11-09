@@ -9,7 +9,6 @@ def get_sheets_client():
         "https://www.googleapis.com/auth/drive"
     ]
     
-    # Load credentials from environment variable
     creds_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
     if not creds_json:
         raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON environment variable is missing.")
@@ -25,11 +24,9 @@ def get_or_create_worksheet(wb, table_name: str, rows=100, cols=20):
     try:
         return wb.worksheet(table_name)
     except gspread.exceptions.WorksheetNotFound:
-        # Automatically create the tab if it's missing to prevent server crashes
         return wb.add_worksheet(title=table_name, rows=rows, cols=cols)
 
 def get_table_records(table_name: str):
-    """Returns all rows of a worksheet/tab as a list of dicts."""
     try:
         wb = get_sheets_client()
         worksheet = get_or_create_worksheet(wb, table_name)
@@ -47,8 +44,6 @@ def find_record_by(table_name: str, key: str, value):
 def insert_record(table_name: str, data: dict):
     wb = get_sheets_client()
     worksheet = get_or_create_worksheet(wb, table_name)
-    
-    # If table is empty, write headers first
     try:
         headers = worksheet.row_values(1)
     except Exception:
@@ -58,18 +53,5 @@ def insert_record(table_name: str, data: dict):
         headers = list(data.keys())
         worksheet.append_row(headers)
     
-    # Append row matching header order
     row_values = [data.get(h, "") for h in headers]
     worksheet.append_row(row_values)
-
-def update_record_by(table_name: str, key: str, value, updates: dict):
-    wb = get_sheets_client()
-    worksheet = get_or_create_worksheet(wb, table_name)
-    cell = worksheet.find(str(value))
-    if cell:
-        row_num = cell.row
-        headers = worksheet.row_values(1)
-        for col_name, new_val in updates.items():
-            if col_name in headers:
-                col_num = headers.index(col_name) + 1
-                worksheet.update_cell(row_num, col_num, new_val)
