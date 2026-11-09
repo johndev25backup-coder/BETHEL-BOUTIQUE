@@ -36,13 +36,36 @@ def get_table_records(table_name: str):
         return []
 
 def find_record_by(table_name: str, key: str, value):
-    records = get_table_records(table_name)
-    target_value = str(value).strip().lower()
-    for row in records:
-        row_value = str(row.get(key, '')).strip().lower()
-        if row_value == target_value:
-            return row
-    return None
+    """Robust raw-value spreadsheet lookup immune to dictionary mapping failures."""
+    try:
+        wb = get_sheets_client()
+        worksheet = get_or_create_worksheet(wb, table_name)
+        
+        all_values = worksheet.get_all_values()
+        if not all_values or len(all_values) < 2:
+            return None
+
+        # Standardize header names
+        headers = [str(h).strip().lower() for h in all_values[0]]
+        key_lower = str(key).strip().lower()
+
+        if key_lower not in headers:
+            return None
+
+        key_index = headers.index(key_lower)
+        target_val = str(value).strip().lower()
+
+        # Search rows starting from row 2
+        for row in all_values[1:]:
+            if len(row) > key_index:
+                cell_val = str(row[key_index]).strip().lower()
+                if cell_val == target_val:
+                    # Map row values back to headers
+                    return {headers[i]: (row[i].strip() if i < len(row) else "") for i in range(len(headers))}
+        return None
+    except Exception as e:
+        print(f"Error in find_record_by: {e}")
+        return None
 
 def insert_record(table_name: str, data: dict):
     wb = get_sheets_client()
@@ -57,7 +80,7 @@ def insert_record(table_name: str, data: dict):
         headers = list(data.keys())
         worksheet.append_row(headers)
     
-    row_values = [data.get(h, "") for h in headers]
+    row_values = [str(data.get(h, "")) for h in headers]
     worksheet.append_row(row_values)
 
 def update_record_by(table_name: str, key: str, value, updates: dict):
@@ -70,4 +93,4 @@ def update_record_by(table_name: str, key: str, value, updates: dict):
         for col_name, new_val in updates.items():
             if col_name in headers:
                 col_num = headers.index(col_name) + 1
-                worksheet.update_cell(row_num, col_num, new_val)
+                worksheet.update_cell(row_num, col_num, str(new_val))
