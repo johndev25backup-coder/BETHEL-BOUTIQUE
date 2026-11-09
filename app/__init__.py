@@ -15,7 +15,16 @@ def create_app(config_class=Config):
         app.config["UPLOAD_FOLDER"] = "/tmp/uploads"
         os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
-    # Initialize extensions, blueprints, and database routes here
-    # (Keep your existing extension initializations like login_manager, db, etc.)
+    # --- Initialize Extensions (Uncomment/add yours as needed) ---
+    # login_manager.init_app(app)
+
+    # --- Register Blueprints ---
+    from app.admin.routes import admin_bp
+    app.register_blueprint(admin_bp)
+
+    # --- Root Route (Prevents 404 on the base URL) ---
+    @app.route("/")
+    def index():
+        return "Flask App with Google Sheets is online and running successfully!"
 
     return app
