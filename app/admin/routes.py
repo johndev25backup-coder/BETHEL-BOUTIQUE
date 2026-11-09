@@ -9,11 +9,11 @@ def staff_login():
     email = str(data.get('email', '')).strip().lower()
     password = str(data.get('password', '')).strip()
     
-    # Fetch all staff records and match cleanly
+    # Query Google Sheets for the staff record
     staff = find_record_by('Staff', 'email', email)
     
-    # Debug print for your server/runtime logs
-    print(f"Attempting login for: {email} | Found in sheet: {bool(staff)}")
+    # Debug print visible in Vercel Runtime Logs
+    print(f"--> LOGIN ATTEMPT: Email='{email}', Found User={staff}")
     
     if staff and str(staff.get('password', '')).strip() == password:
         return jsonify({"success": True, "message": "Staff login successful"})
@@ -28,5 +28,4 @@ def request_otp():
     if not identifier:
         return jsonify({"success": False, "message": "Identifier is required"}), 400
         
-    # Generate and save OTP logic here, then return JSON success
     return jsonify({"success": True, "message": "OTP sent successfully"})
