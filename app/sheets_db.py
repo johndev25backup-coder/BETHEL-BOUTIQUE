@@ -18,14 +18,21 @@ def get_sheets_client():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
     
-    sheet_name = os.environ.get("GOOGLE_SHEET_NAME", "AppDatabase")
+    sheet_name = os.environ.get("GOOGLE_SHEET_NAME", "bethel_boutique.db")
     return client.open(sheet_name)
+
+def get_or_create_worksheet(wb, table_name: str, rows=100, cols=20):
+    try:
+        return wb.worksheet(table_name)
+    except gspread.exceptions.WorksheetNotFound:
+        # Automatically create the tab if it's missing to prevent server crashes
+        return wb.add_worksheet(title=table_name, rows=rows, cols=cols)
 
 def get_table_records(table_name: str):
     """Returns all rows of a worksheet/tab as a list of dicts."""
     try:
         wb = get_sheets_client()
-        worksheet = wb.worksheet(table_name)
+        worksheet = get_or_create_worksheet(wb, table_name)
         return worksheet.get_all_records()
     except Exception:
         return []
@@ -39,9 +46,14 @@ def find_record_by(table_name: str, key: str, value):
 
 def insert_record(table_name: str, data: dict):
     wb = get_sheets_client()
-    worksheet = wb.worksheet(table_name)
+    worksheet = get_or_create_worksheet(wb, table_name)
+    
     # If table is empty, write headers first
-    headers = worksheet.row_values(1)
+    try:
+        headers = worksheet.row_values(1)
+    except Exception:
+        headers = []
+        
     if not headers:
         headers = list(data.keys())
         worksheet.append_row(headers)
@@ -52,7 +64,7 @@ def insert_record(table_name: str, data: dict):
 
 def update_record_by(table_name: str, key: str, value, updates: dict):
     wb = get_sheets_client()
-    worksheet = wb.worksheet(table_name)
+    worksheet = get_or_create_worksheet(wb, table_name)
     cell = worksheet.find(str(value))
     if cell:
         row_num = cell.row
