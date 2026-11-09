@@ -27,6 +27,7 @@ def get_or_create_worksheet(wb, table_name: str, rows=100, cols=20):
         return wb.add_worksheet(title=table_name, rows=rows, cols=cols)
 
 def get_table_records(table_name: str):
+    """Returns all rows of a worksheet/tab as a list of dicts."""
     try:
         wb = get_sheets_client()
         worksheet = get_or_create_worksheet(wb, table_name)
@@ -36,14 +37,17 @@ def get_table_records(table_name: str):
 
 def find_record_by(table_name: str, key: str, value):
     records = get_table_records(table_name)
+    target_value = str(value).strip().lower()
     for row in records:
-        if str(row.get(key)) == str(value):
+        row_value = str(row.get(key, '')).strip().lower()
+        if row_value == target_value:
             return row
     return None
 
 def insert_record(table_name: str, data: dict):
     wb = get_sheets_client()
     worksheet = get_or_create_worksheet(wb, table_name)
+    
     try:
         headers = worksheet.row_values(1)
     except Exception:
@@ -55,3 +59,15 @@ def insert_record(table_name: str, data: dict):
     
     row_values = [data.get(h, "") for h in headers]
     worksheet.append_row(row_values)
+
+def update_record_by(table_name: str, key: str, value, updates: dict):
+    wb = get_sheets_client()
+    worksheet = get_or_create_worksheet(wb, table_name)
+    cell = worksheet.find(str(value))
+    if cell:
+        row_num = cell.row
+        headers = worksheet.row_values(1)
+        for col_name, new_val in updates.items():
+            if col_name in headers:
+                col_num = headers.index(col_name) + 1
+                worksheet.update_cell(row_num, col_num, new_val)
