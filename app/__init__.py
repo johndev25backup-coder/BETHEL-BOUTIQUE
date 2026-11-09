@@ -33,9 +33,10 @@ def create_app(config_class=Config):
     except ImportError:
         pass
 
-    # --- Root Route ---
+   # --- Root Route ---
     @app.route("/")
     def index():
-        return "Bethel Boutique Flask App is online and running successfully!"
+        from flask import render_template
+        return render_template("index.html")  # Replace "index.html" with your actual template file name
 
     return app
