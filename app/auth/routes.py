@@ -60,9 +60,16 @@ def request_otp():
         return jsonify({"error": "Phone number or email is required"}), 400
 
     code = _otp_for(identifier, _otp_window())
-    response = {"message": "OTP sent successfully"}
+
+    # TODO: Hook up your real SMS (Africa's Talking / Twilio) or Email (SendGrid / Resend) provider here.
+    # e.g., send_sms(identifier, code) or send_email(identifier, code)
+
+    response = {"message": "Verification code sent successfully"}
+    
+    # Only include debug code if explicitly enabled in environment variables for testing
     if _show_debug_otp():
         response["debug_otp"] = code
+
     return jsonify(response), 200
 
 
@@ -81,7 +88,6 @@ def verify_otp_and_login():
         log_audit_event(action="otp_verify_failed", details={"identifier": identifier})
         return jsonify({"error": "Invalid or expired OTP code"}), 401
 
-    # Check if identifier is phone or email
     is_email = "@" in identifier
     filter_kwargs = {"email": identifier} if is_email else {"phone": identifier}
     
@@ -90,7 +96,6 @@ def verify_otp_and_login():
         if not name:
             return jsonify({"error": "Name is required for new customer registrations"}), 400
         
-        # New customers are strictly registered as CLIENT role
         user = User(
             name=name,
             email=identifier if is_email else None,
@@ -101,7 +106,6 @@ def verify_otp_and_login():
         db.session.commit()
         log_audit_event(action="user_registered", entity_type="user", entity_id=user.id, details={"via": "otp"})
 
-    # Security safeguard: Prevent staff/owner roles from logging in via public OTP endpoints
     if user.role in (UserRole.STAFF, UserRole.OWNER):
         return jsonify({"error": "Staff and owners must use secure password or approved Google login"}), 403
 
@@ -154,7 +158,6 @@ def staff_google_login():
         log_audit_event(action="staff_google_failed", details={"reason": "email_unverified"})
         return jsonify({"error": "Google account email is unverified"}), 401
 
-    # STRICT CHECK: Account must already exist and be pre-approved with STAFF or OWNER role
     user = User.query.filter_by(email=email).first()
     if not user or user.role not in (UserRole.STAFF, UserRole.OWNER):
         log_audit_event(action="staff_google_failed", details={"email": email, "reason": "not_preapproved"})
