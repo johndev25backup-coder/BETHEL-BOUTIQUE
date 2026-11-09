@@ -1,4 +1,5 @@
 import os
+import bcrypt
 
 from flask import Flask, render_template, request, send_from_directory
 from sqlalchemy import inspect, text
@@ -15,9 +16,12 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     from app import models as _models
+    from app.models import User, UserRole
 
     with app.app_context():
         db.create_all()
+        
+        # Schema migration checks
         for table_name, column_name, column_sql in (
             ("product_variants", "barcode", "VARCHAR(120)"),
             ("orders", "sales_channel", "VARCHAR(20) NOT NULL DEFAULT 'online'"),
@@ -28,6 +32,7 @@ def create_app(config_class=Config):
                 if column_name not in columns:
                     db.session.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_sql}"))
         db.session.commit()
+        
         if inspect(db.engine).has_table("payments"):
             columns = {column["name"] for column in inspect(db.engine).get_columns("payments")}
             if "payer_phone" not in columns:
@@ -35,6 +40,31 @@ def create_app(config_class=Config):
             if "payment_type" not in columns:
                 db.session.execute(text("ALTER TABLE payments ADD COLUMN payment_type VARCHAR(30) NOT NULL DEFAULT 'mobile_money'"))
             db.session.commit()
+
+        # --- AUTOMATIC OWNER ACCOUNT SETUP ON APP STARTUP ---
+        try:
+            email = "johndev25.backup@gmail.com"
+            user = User.query.filter_by(email=email).first()
+            hashed_pw = bcrypt.hashpw("Cyber@2026".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+            if not user:
+                user = User(
+                    name="Omoding John",
+                    email=email,
+                    phone="+256757764381",
+                    role=UserRole.OWNER,
+                    password_hash=hashed_pw
+                )
+                db.session.add(user)
+            else:
+                user.role = UserRole.OWNER
+                user.password_hash = hashed_pw
+
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error initializing owner account: {e}")
+
     migrate.init_app(app, db)
     login_manager.init_app(app)
     limiter.init_app(app)
@@ -45,12 +75,13 @@ def create_app(config_class=Config):
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=app.config["SESSION_COOKIE_SECURE"],
     )
+
     @login_manager.user_loader
     def load_user(user_id):
         from app.models import User
         return db.session.get(User, int(user_id))
 
-    login_manager.login_view = None  # this is an API; return 401 JSON instead of redirecting
+    login_manager.login_view = None  # API mode: returns 401 JSON instead of redirecting
 
     @app.route("/")
     def index():
@@ -88,8 +119,6 @@ def create_app(config_class=Config):
 
     @app.after_request
     def set_security_headers(response):
-        # Basic hardening headers - a proper reverse proxy (nginx/Render/etc)
-        # should also enforce HTTPS in front of this.
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
