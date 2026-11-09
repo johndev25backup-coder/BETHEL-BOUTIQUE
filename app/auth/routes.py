@@ -3,7 +3,7 @@ import bcrypt
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from app.extensions import db
-from app.models import User, UserRole, Order
+from app.models import User, UserRole
 from app.decorators import log_audit_event
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
@@ -19,7 +19,16 @@ def admin_stats():
         return jsonify({"error": "Unauthorized access"}), 403
     
     total_users = User.query.count()
-    total_orders = Order.query.count() if hasattr(Order, 'query') else 0
+    
+    # Safely count orders if the Order model exists
+    total_orders = 0
+    try:
+        from app.models import Order
+        if Order:
+            total_orders = Order.query.count()
+    except Exception:
+        pass
+
     return jsonify({
         "total_users": total_users,
         "total_orders": total_orders,
@@ -42,7 +51,6 @@ def update_my_password():
     if len(new_password) < 8:
         return jsonify({"error": "New password must be at least 8 characters long"}), 400
 
-    # Verify old password
     if not bcrypt.checkpw(old_password.encode("utf-8"), current_user.password_hash.encode("utf-8")):
         return jsonify({"error": "Incorrect current password"}), 401
 
@@ -56,7 +64,6 @@ def update_my_password():
 @admin_bp.route("/staff/reset-password", methods=["POST"])
 @login_required
 def admin_reset_staff_password():
-    # Only the Owner can reset other staff accounts
     if current_user.role != UserRole.OWNER:
         return jsonify({"error": "Only the Super Admin / Owner can perform this action"}), 403
 
@@ -73,7 +80,6 @@ def admin_reset_staff_password():
     if staff_user.role == UserRole.OWNER and staff_user.id != current_user.id:
         return jsonify({"error": "Cannot reset another owner's password through this endpoint"}), 403
 
-    # Generate a secure temporary default password
     temp_default_password = f"Temp!{secrets.token_urlsafe(6)}"
     
     staff_user.password_hash = _hash_password(temp_default_password)
@@ -91,3 +97,4 @@ def admin_reset_staff_password():
         "temporary_password": temp_default_password,
         "instructions": "Provide this temporary password securely to the staff member. They must log in and change it immediately."
     }), 200
+    
