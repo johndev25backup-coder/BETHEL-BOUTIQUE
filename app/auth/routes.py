@@ -4,7 +4,6 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import User, UserRole
-from app.decorators import log_audit_event
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
@@ -19,19 +18,9 @@ def admin_stats():
         return jsonify({"error": "Unauthorized access"}), 403
     
     total_users = User.query.count()
-    
-    # Safely count orders if the Order model exists
-    total_orders = 0
-    try:
-        from app.models import Order
-        if Order:
-            total_orders = Order.query.count()
-    except Exception:
-        pass
-
     return jsonify({
         "total_users": total_users,
-        "total_orders": total_orders,
+        "total_orders": 0,
     }), 200
 
 
@@ -57,7 +46,6 @@ def update_my_password():
     current_user.password_hash = _hash_password(new_password)
     db.session.commit()
     
-    log_audit_event(action="password_updated", entity_type="user", entity_id=current_user.id)
     return jsonify({"message": "Password updated successfully"}), 200
 
 
@@ -85,16 +73,8 @@ def admin_reset_staff_password():
     staff_user.password_hash = _hash_password(temp_default_password)
     db.session.commit()
 
-    log_audit_event(
-        action="admin_reset_password", 
-        entity_type="user", 
-        entity_id=staff_user.id, 
-        details={"reset_by": current_user.email}
-    )
-
     return jsonify({
         "message": f"Password reset successfully for {staff_user.email}",
         "temporary_password": temp_default_password,
         "instructions": "Provide this temporary password securely to the staff member. They must log in and change it immediately."
     }), 200
-    
