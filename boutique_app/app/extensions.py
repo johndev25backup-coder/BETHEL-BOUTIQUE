@@ -1,3 +1,4 @@
+
 from flask_login import LoginManager
 
 login_manager = LoginManager()
@@ -10,7 +11,6 @@ class _Limiter:
     def limit(self, *args, **kwargs):
         def decorator(fn):
             return fn
-
         return decorator
 
 
