@@ -1,11 +1,13 @@
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
+
 from app.config import Config
 from app.extensions import limiter, login_manager
 
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    # Templates and static assets live inside the app package in this project.
+    app = Flask(__name__, template_folder="templates", static_folder="static")
     app.config.from_object(config_class)
 
     secret = os.environ.get("SECRET_KEY", "").strip()
@@ -27,6 +29,10 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp)
 
     @app.get("/")
+    def home():
+        return render_template("index.html")
+
+    @app.get("/api/health")
     def health():
         return jsonify({
             "success": True,
