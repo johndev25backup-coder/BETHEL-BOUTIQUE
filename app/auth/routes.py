@@ -56,23 +56,33 @@ def staff_login():
         if not valid:
             return jsonify({"success": False, "message": "Invalid email or password."}), 401
 
-        role = str(staff.get("role", "STAFF")).strip().upper()
-        if role not in {"STAFF", "OWNER"}:
+        raw_role = str(staff.get("role", "STAFF")).strip().upper()
+        # The current Staff worksheet uses the labels "Admin" and "Staff".
+        role_map = {"ADMIN": "owner", "OWNER": "owner", "STAFF": "staff"}
+        role = role_map.get(raw_role)
+        if not role:
             return jsonify({"success": False, "message": "This account is not authorized."}), 403
+
+        display_name = str(staff.get("name", "") or "").strip()
+        if not display_name:
+            display_name = email.split("@", 1)[0].replace(".", " ").replace("_", " ").title()
 
         # Staff sheet currently has no ID column, so use normalized email as session identifier.
         session.clear()
         session.permanent = True
         session["staff_id"] = email
         session["staff_email"] = email
+        session["staff_name"] = display_name
         session["staff_role"] = role
         session["authenticated"] = True
 
+        user_payload = {"id": email, "name": display_name, "email": email, "role": role}
         return jsonify({
             "success": True,
             "message": "Login successful.",
             "password_upgraded": upgraded,
-            "staff": {"id": email, "email": email, "role": role},
+            **user_payload,
+            "staff": user_payload,
         }), 200
 
     except Exception:
@@ -88,14 +98,13 @@ def get_current_staff():
     if not session.get("authenticated"):
         return jsonify({"authenticated": False}), 401
 
-    return jsonify({
-        "authenticated": True,
-        "staff": {
-            "id": session.get("staff_id"),
-            "email": session.get("staff_email"),
-            "role": session.get("staff_role"),
-        },
-    }), 200
+    user_payload = {
+        "id": session.get("staff_id"),
+        "name": session.get("staff_name", "Staff"),
+        "email": session.get("staff_email"),
+        "role": session.get("staff_role"),
+    }
+    return jsonify({"authenticated": True, **user_payload, "staff": user_payload}), 200
 
 
 @auth_bp.route("/logout", methods=["POST"])
