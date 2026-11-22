@@ -534,7 +534,7 @@
         });
         const body = await res.json();
         if (!res.ok) {
-          errorEl.textContent = body.error || 'Invalid email or password.';
+          errorEl.textContent = body.message || body.error || 'Invalid email or password.';
           errorEl.classList.remove('hidden');
           return;
         }
